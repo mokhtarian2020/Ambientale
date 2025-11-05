@@ -1,0 +1,3 @@
+case_id,case_date,istat_code,disease_type,patient_age,patient_gender,severity,outcome,environmental_exposure,data_source
+HEP_20230710_094001_000,2023-07-10,094001,hepatitis_a,31,M,mild,active,"{'ecoli_count': 10.65, 'ph': 7.14, 'residual_chlorine': 0.1, 'precipitation': 0.0}",SYNTHETIC_PLS
+HEP_20231113_078020_000,2023-11-13,078020,hepatitis_a,37,M,mild,active,"{'ecoli_count': 0.59, 'ph': 7.92, 'residual_chlorine': 0.12, 'precipitation': 0.0}",SYNTHETIC_PLS

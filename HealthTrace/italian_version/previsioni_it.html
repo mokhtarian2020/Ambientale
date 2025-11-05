@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Modelli Predittivi</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            color: #2E7D32;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            padding: 30px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .prediction-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            color: #2E7D32;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .model-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .model-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .model-card.gam { border-left-color: #f44336; }
+        .model-card.arimax { border-left-color: #2196F3; }
+        .model-card.dlnm { border-left-color: #4CAF50; }
+        .model-card.rf { border-left-color: #ff9800; }
+        .model-card.xgboost { border-left-color: #9c27b0; }
+        .model-card.spatial { border-left-color: #00bcd4; }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .model-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .model-accuracy {
+            background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #2E7D32;
+            border: 2px solid #4CAF50;
+        }
+
+        .model-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .model-description {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .model-features {
+            margin-top: 15px;
+        }
+
+        .features-title {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .feature-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .prediction-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .prediction-card {
+            background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .prediction-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2E7D32;
+            margin-bottom: 15px;
+        }
+
+        .prediction-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .prediction-confidence {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .risk-level {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+            display: inline-block;
+        }
+
+        .risk-low { background: #4CAF50; color: white; }
+        .risk-medium { background: #ff9800; color: white; }
+        .risk-high { background: #f44336; color: white; }
+
+        .alert-prediction {
+            background: linear-gradient(135deg, #ffeb3b20 0%, #ffc10720 100%);
+            border: 2px solid #ff9800;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .alert-title {
+            color: #e65100;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .forecast-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .forecast-chart {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .forecast-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .summary-title {
+            font-weight: bold;
+            color: #2E7D32;
+            margin-bottom: 8px;
+        }
+
+        .summary-text {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 0;
+            text-align: center;
+            color: #666;
+            border-top: 2px solid #4CAF50;
+        }
+
+        @media (max-width: 768px) {
+            .model-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .forecast-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .prediction-dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🔮 HealthTrace</h1>
+                    <div class="subtitle">Modelli Predittivi - Previsione Malattie Infettive</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <a href="index_it.html" class="back-btn">← Torna alla Dashboard Principale</a>
+            
+            <h2 class="section-title">Modelli Predittivi per Malattie Infettive</h2>
+            
+            <!-- Alert Predittivi -->
+            <div class="alert-prediction">
+                <div class="alert-title">🚨 Alert Predittivi Attivi</div>
+                <p><strong>Molise:</strong> Modello GAM prevede picco influenzale in 5-7 giorni (confidenza 89%)</p>
+                <p><strong>Campania:</strong> DLNM indica incremento legionellosi per temperature elevate (confidenza 78%)</p>
+                <p><strong>Calabria:</strong> Random Forest suggerisce monitoraggio epatite A per piogge previste (confidenza 71%)</p>
+            </div>
+
+            <!-- Dashboard Previsioni -->
+            <div class="prediction-section">
+                <h3 class="section-header">📊 Dashboard Previsioni Prossimi 7 Giorni</h3>
+                <div class="prediction-dashboard">
+                    <div class="prediction-card">
+                        <div class="prediction-title">Influenza - Molise</div>
+                        <div class="prediction-value">+18</div>
+                        <div class="prediction-confidence">Confidenza: 89%</div>
+                        <span class="risk-level risk-high">Rischio Alto</span>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <div class="prediction-title">Legionellosi - Campania</div>
+                        <div class="prediction-value">+5</div>
+                        <div class="prediction-confidence">Confidenza: 78%</div>
+                        <span class="risk-level risk-medium">Rischio Medio</span>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <div class="prediction-title">Epatite A - Calabria</div>
+                        <div class="prediction-value">+1</div>
+                        <div class="prediction-confidence">Confidenza: 71%</div>
+                        <span class="risk-level risk-low">Rischio Basso</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modelli Disponibili -->
+            <div class="prediction-section">
+                <h3 class="section-header">🤖 Modelli di Machine Learning Attivi</h3>
+                <div class="model-cards">
+                    <!-- GAM -->
+                    <div class="model-card gam">
+                        <div class="model-header">
+                            <div class="model-name">GAM (Generalized Additive Model)</div>
+                            <div class="model-accuracy">89.2%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.87</div>
+                                <div class="metric-label">AUC</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">12.3</div>
+                                <div class="metric-label">MAE</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Modello ottimale per catturare relazioni non-lineari tra fattori ambientali e incidenza influenzale. 
+                            Eccellente per trend stagionali e effetti ritardati.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Variabili Principali:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">PM2.5</span>
+                                <span class="feature-tag">Temperatura</span>
+                                <span class="feature-tag">Umidità</span>
+                                <span class="feature-tag">Lag temporali</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ARIMAX -->
+                    <div class="model-card arimax">
+                        <div class="model-header">
+                            <div class="model-name">ARIMAX</div>
+                            <div class="model-accuracy">82.5%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.83</div>
+                                <div class="metric-label">R²</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">15.7</div>
+                                <div class="metric-label">RMSE</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Serie temporali con regressori esterni per previsioni a medio termine. 
+                            Ideale per identificare pattern stagionali e autocorrelazioni temporali.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Componenti Principali:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">Autogressione</span>
+                                <span class="feature-tag">Media Mobile</span>
+                                <span class="feature-tag">Stagionalità</span>
+                                <span class="feature-tag">Covarianze Ext.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DLNM -->
+                    <div class="model-card dlnm">
+                        <div class="model-header">
+                            <div class="model-name">DLNM (Distributed Lag)</div>
+                            <div class="model-accuracy">91.8%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.92</div>
+                                <div class="metric-label">AUC</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">8.9</div>
+                                <div class="metric-label">MAE</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Eccellente per modellare effetti ritardati e cumulativi della temperatura su legionellosi. 
+                            Cattura relazioni complesse esposizione-risposta.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Specializzazioni:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">Lag Distribuiti</span>
+                                <span class="feature-tag">Effetti Cumulativi</span>
+                                <span class="feature-tag">Temperatura</span>
+                                <span class="feature-tag">Umidità</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Random Forest -->
+                    <div class="model-card rf">
+                        <div class="model-header">
+                            <div class="model-name">Random Forest</div>
+                            <div class="model-accuracy">85.3%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.86</div>
+                                <div class="metric-label">Precision</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">0.84</div>
+                                <div class="metric-label">Recall</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Ensemble robusto per classificazione rischio multifattoriale. 
+                            Gestisce interazioni complesse tra variabili ambientali e sanitarie.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Punti di Forza:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">Interazioni</span>
+                                <span class="feature-tag">Non-linearità</span>
+                                <span class="feature-tag">Feature Import.</span>
+                                <span class="feature-tag">Robustezza</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- XGBoost -->
+                    <div class="model-card xgboost">
+                        <div class="model-header">
+                            <div class="model-name">XGBoost</div>
+                            <div class="model-accuracy">87.9%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.88</div>
+                                <div class="metric-label">F1-Score</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">11.2</div>
+                                <div class="metric-label">MAE</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Gradient boosting per previsioni ad alta performance. 
+                            Ottimizzato per dataset complessi con molte variabili ambientali.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Caratteristiche:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">Boosting</span>
+                                <span class="feature-tag">Regularizzazione</span>
+                                <span class="feature-tag">Velocità</span>
+                                <span class="feature-tag">Accuratezza</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spatial Models -->
+                    <div class="model-card spatial">
+                        <div class="model-header">
+                            <div class="model-name">Modelli Spaziali</div>
+                            <div class="model-accuracy">83.7%</div>
+                        </div>
+                        <div class="model-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">0.84</div>
+                                <div class="metric-label">Moran's I</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">14.6</div>
+                                <div class="metric-label">RMSE</div>
+                            </div>
+                        </div>
+                        <div class="model-description">
+                            Modelli geo-statistici per analisi cluster e diffusione spaziale. 
+                            Identificano hotspot e pattern di trasmissione geografici.
+                        </div>
+                        <div class="model-features">
+                            <div class="features-title">Analisi Spaziale:</div>
+                            <div class="feature-tags">
+                                <span class="feature-tag">Autocorr. Spaz.</span>
+                                <span class="feature-tag">Cluster Detection</span>
+                                <span class="feature-tag">Kriging</span>
+                                <span class="feature-tag">Hotspot Analysis</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sezione Forecast -->
+            <div class="prediction-section">
+                <h3 class="section-header">📈 Previsioni a 14 Giorni</h3>
+                <div class="forecast-section">
+                    <div class="forecast-chart">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                    <div class="forecast-summary">
+                        <h4 style="color: #2E7D32; margin-bottom: 20px;">Riassunto Previsioni</h4>
+                        
+                        <div class="summary-item">
+                            <div class="summary-title">Influenza - Tendenza</div>
+                            <div class="summary-text">Incremento previsto nei prossimi 5-7 giorni per condizioni meteorologiche avverse in Molise</div>
+                        </div>
+                        
+                        <div class="summary-item">
+                            <div class="summary-title">Legionellosi - Stabilità</div>
+                            <div class="summary-text">Trend stabile con lieve incremento in Campania per aumento temperature</div>
+                        </div>
+                        
+                        <div class="summary-item">
+                            <div class="summary-title">Epatite A - Monitoraggio</div>
+                            <div class="summary-text">Situazione sotto controllo, attivare sorveglianza per precipitazioni intense</div>
+                        </div>
+                        
+                        <div class="summary-item">
+                            <div class="summary-title">Raccomandazioni</div>
+                            <div class="summary-text">Rafforzare sorveglianza in Molise, monitorare sistemi idrici in Campania</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Modelli -->
+            <div class="prediction-section">
+                <h3 class="section-header">📊 Performance Comparativa Modelli</h3>
+                <div class="chart-container">
+                    <canvas id="modelPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Piattaforma HealthTrace v2.0 - Modelli Predittivi Avanzati</p>
+            <p>Dati Sintetici per Dimostrazione - Machine Learning per Sanità Pubblica</p>
+        </div>
+    </footer>
+
+    <script>
+        // URL Base API
+        const API_BASE = 'http://localhost:8003';
+        
+        // Dati modelli e previsioni
+        const modelliData = {
+            gam: { accuracy: 89.2, auc: 0.87, mae: 12.3 },
+            arimax: { accuracy: 82.5, r2: 0.83, rmse: 15.7 },
+            dlnm: { accuracy: 91.8, auc: 0.92, mae: 8.9 },
+            rf: { accuracy: 85.3, precision: 0.86, recall: 0.84 },
+            xgboost: { accuracy: 87.9, f1: 0.88, mae: 11.2 },
+            spatial: { accuracy: 83.7, morans_i: 0.84, rmse: 14.6 }
+        };
+
+        // Inizializza la pagina
+        async function inizializzaPagina() {
+            try {
+                await caricaDatiPredittivi();
+                creaGraficoPrevisioni();
+                creaGraficoPerformanceModelli();
+            } catch (error) {
+                console.error('Errore nel caricamento:', error);
+                // Usa dati di fallback
+                creaGraficoPrevisioni();
+                creaGraficoPerformanceModelli();
+            }
+        }
+
+        // Carica dati predittivi
+        async function caricaDatiPredittivi() {
+            // Implementazione futura per dati reali
+            console.log('Caricamento dati predittivi completato');
+        }
+
+        // Grafico previsioni
+        function creaGraficoPrevisioni() {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            
+            // Genera date per i prossimi 14 giorni
+            const giorni = [];
+            const now = new Date();
+            for (let i = 0; i < 14; i++) {
+                const data = new Date(now);
+                data.setDate(data.getDate() + i);
+                giorni.push(data.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' }));
+            }
+
+            // Dati di previsione sintetici
+            const influenzaPrevisioni = [23, 25, 28, 32, 35, 38, 41, 39, 36, 33, 30, 28, 26, 24];
+            const legionellosiPrevisioni = [8, 8, 9, 10, 11, 12, 12, 13, 13, 12, 11, 10, 9, 8];
+            const epatitePrevisioni = [1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: giorni,
+                    datasets: [
+                        {
+                            label: 'Influenza - Molise (Previsto)',
+                            data: influenzaPrevisioni,
+                            borderColor: '#f44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Legionellosi - Campania (Previsto)',
+                            data: legionellosiPrevisioni,
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Epatite A - Calabria (Previsto)',
+                            data: epatitePrevisioni,
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Previsioni Casi per Malattia - Prossimi 14 Giorni',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#2E7D32'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Numero Casi Previsti'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Data'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            });
+        }
+
+        // Grafico performance modelli
+        function creaGraficoPerformanceModelli() {
+            const ctx = document.getElementById('modelPerformanceChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Accuratezza', 'Velocità', 'Interpretabilità', 'Robustezza', 'Generalizzazione'],
+                    datasets: [
+                        {
+                            label: 'GAM',
+                            data: [89, 75, 90, 85, 80],
+                            borderColor: '#f44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                            pointBackgroundColor: '#f44336'
+                        },
+                        {
+                            label: 'DLNM',
+                            data: [92, 70, 85, 90, 85],
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                            pointBackgroundColor: '#4CAF50'
+                        },
+                        {
+                            label: 'XGBoost',
+                            data: [88, 95, 65, 85, 90],
+                            borderColor: '#9c27b0',
+                            backgroundColor: 'rgba(156, 39, 176, 0.2)',
+                            pointBackgroundColor: '#9c27b0'
+                        },
+                        {
+                            label: 'Random Forest',
+                            data: [85, 85, 70, 95, 85],
+                            borderColor: '#ff9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                            pointBackgroundColor: '#ff9800'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Confronto Performance Modelli (Scale 0-100)',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#2E7D32'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Inizializza al caricamento pagina
+        document.addEventListener('DOMContentLoaded', inizializzaPagina);
+    </script>
+</body>
+</html>

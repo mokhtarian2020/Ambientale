@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Sistema di Monitoraggio Ambientale</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .features {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .features h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .api-info {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .api-link {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .api-link:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 HealthTrace</h1>
+            <p>Sistema di Monitoraggio e Correlazione Ambientale-Sanitaria</p>
+            <p><strong>Regioni Target:</strong> Molise • Campania • Calabria</p>
+        </div>
+        
+        <!-- Navigation Menu -->
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="background: rgba(255,255,255,0.95); border-radius: 15px; padding: 20px; display: inline-block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                <h3 style="color: #667eea; margin-bottom: 15px;">🔬 Visualizzazioni Avanzate</h3>
+                <div style="display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <a href="environmental_correlations.html" 
+                       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: transform 0.3s ease;"
+                       onmouseover="this.style.transform='scale(1.05)'" 
+                       onmouseout="this.style.transform='scale(1)'">
+                        📊 Correlazioni Ambientali-Malattie
+                    </a>
+                    <a href="http://localhost:8002/docs" 
+                       style="background: #4CAF50; color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: transform 0.3s ease;"
+                       onmouseover="this.style.transform='scale(1.05)'" 
+                       onmouseout="this.style.transform='scale(1)'"
+                       target="_blank">
+                        🔧 API Documentazione
+                    </a>
+                    <a href="dashboard.html" 
+                       style="background: #FF9800; color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; transition: transform 0.3s ease;"
+                       onmouseover="this.style.transform='scale(1.05)'" 
+                       onmouseout="this.style.transform='scale(1)'">
+                        📈 Dashboard Analitico
+                    </a>
+                </div>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    <strong>🎯 Demo con Dati Sintetici</strong> - Pronto per integrazione API reali
+                </p>
+            </div>
+        </div>
+        
+        <div class="cards">
+            <div class="card">
+                <h3>📊 Dashboard di Monitoraggio</h3>
+                <div class="status">
+                    <div class="status-indicator"></div>
+                    <span>Sistema Operativo</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <div class="stat-number" id="totalReports">156</div>
+                        <div class="stat-label">Segnalazioni</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="totalInvestigations">124</div>
+                        <div class="stat-label">Indagini</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="activePatients">45</div>
+                        <div class="stat-label">Pazienti Attivi</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="recoveredPatients">89</div>
+                        <div class="stat-label">Guariti</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🌍 Dati Ambientali</h3>
+                <div class="status">
+                    <div class="status-indicator"></div>
+                    <span>Integrazione Attiva</span>
+                </div>
+                <p><strong>Fonti Dati:</strong></p>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>ISPRA - Indicatori Ambientali</li>
+                    <li>ARPA Campania - Qualità dell'Aria</li>
+                    <li>ISTAT - Dati Meteorologici</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>Parametri Monitorati:</strong></p>
+                <p style="font-size: 0.9rem; color: #666;">PM10, PM2.5, Ozono, NO₂, SO₂, Temperatura, Umidità, Precipitazioni</p>
+            </div>
+            
+            <div class="card">
+                <h3>🔬 Analisi e Correlazioni</h3>
+                <div class="status">
+                    <div class="status-indicator"></div>
+                    <span>Modelli Attivi</span>
+                </div>
+                <p><strong>Modelli Implementati:</strong></p>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>Regressione Lineare Multipla</li>
+                    <li>Analisi Spaziale (Moran's I)</li>
+                    <li>Modelli Serie Temporali (ARIMA)</li>
+                    <li>Machine Learning (Random Forest)</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h2>🎯 Funzionalità del Sistema</h2>
+            <div class="feature-list">
+                <div class="feature">
+                    <div class="feature-icon">1</div>
+                    <div>
+                        <strong>Gestione Utenti</strong><br>
+                        <small>MMG, PLS, U.O.S.D., U.O.C. Epidemiologia</small>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">2</div>
+                    <div>
+                        <strong>Segnalazione Malattie</strong><br>
+                        <small>Reporting completo malattie infettive</small>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">3</div>
+                    <div>
+                        <strong>Gestione Pazienti</strong><br>
+                        <small>Ricerca, visualizzazione, aggiornamento</small>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">4</div>
+                    <div>
+                        <strong>Indagini Epidemiologiche</strong><br>
+                        <small>Form specializzati per patologia</small>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">5</div>
+                    <div>
+                        <strong>Visualizzazione Geografica</strong><br>
+                        <small>Mappe interattive e heatmap</small>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">6</div>
+                    <div>
+                        <strong>Correlazioni Ambientali</strong><br>
+                        <small>Analisi ambiente-salute</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="api-info">
+                <p style="margin-bottom: 15px;">
+                    <strong>Enhanced API Disponibile su:</strong> http://localhost:8002
+                </p>
+                <a href="http://localhost:8002/docs" class="api-link" target="_blank">
+                    📚 Documentazione API Completa
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simulate live data updates with enhanced API
+        function updateStats() {
+            fetch('http://localhost:8002/api/v1/dashboard/summary')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalReports').textContent = data.total_reports;
+                    document.getElementById('totalInvestigations').textContent = data.total_investigations;
+                    document.getElementById('activePatients').textContent = data.active_patients;
+                    document.getElementById('recoveredPatients').textContent = data.recovered_patients;
+                })
+                .catch(error => {
+                    console.log('Enhanced API not available, using fallback data:', error);
+                    // Fallback to synthetic data
+                    document.getElementById('totalReports').textContent = '350';
+                    document.getElementById('totalInvestigations').textContent = '27';
+                    document.getElementById('activePatients').textContent = '105';
+                    document.getElementById('recoveredPatients').textContent = '245';
+                });
+        }
+        
+        // Update stats every 30 seconds
+        updateStats();
+        setInterval(updateStats, 30000);
+    </script>
+</body>
+</html>

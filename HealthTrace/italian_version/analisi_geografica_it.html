@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Analisi Geografica</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            color: #2E7D32;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            padding: 30px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .geographic-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            color: #2E7D32;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .map-container {
+            height: 500px;
+            border-radius: 10px;
+            border: 2px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #4CAF50;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .stat-label {
+            color: #555;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .region-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .region-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid;
+        }
+
+        .region-card.molise { border-left-color: #f44336; }
+        .region-card.campania { border-left-color: #2196F3; }
+        .region-card.calabria { border-left-color: #4CAF50; }
+
+        .region-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .region-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .region-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .risk-factors {
+            margin-top: 15px;
+        }
+
+        .factors-title {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .factor-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .factor-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .hotspot-map {
+            height: 400px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .alert-section {
+            background: linear-gradient(135deg, #ffeb3b20 0%, #ffc10720 100%);
+            border: 2px solid #ff9800;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .alert-title {
+            color: #e65100;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .alert-list {
+            list-style: none;
+        }
+
+        .alert-item {
+            background: white;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 0;
+            text-align: center;
+            color: #666;
+            border-top: 2px solid #4CAF50;
+        }
+
+        @media (max-width: 768px) {
+            .region-analysis {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🗺️ HealthTrace</h1>
+                    <div class="subtitle">Analisi Geografica - Distribuzione Malattie Infettive</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <a href="index_it.html" class="back-btn">← Torna alla Dashboard Principale</a>
+            
+            <h2 class="section-title">Analisi Geografica delle Malattie Infettive</h2>
+            
+            <!-- Alert Hotspot -->
+            <div class="alert-section">
+                <div class="alert-title">🚨 Alert Geografici Attivi</div>
+                <ul class="alert-list">
+                    <li class="alert-item">
+                        <strong>Molise - Campobasso:</strong> Cluster influenzale (15 casi in 72h) - Correlazione PM2.5 elevato
+                    </li>
+                    <li class="alert-item">
+                        <strong>Campania - Napoli Nord:</strong> Focolaio Legionellosi (3 casi) - Sistema idrico sotto monitoraggio
+                    </li>
+                    <li class="alert-item">
+                        <strong>Calabria - Cosenza:</strong> Sorveglianza epatite A attiva - Controlli sicurezza alimentare
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Statistiche Generali -->
+            <div class="geographic-section">
+                <h3 class="section-header">📊 Panoramica Territoriale</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Regioni Monitorate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">Comuni Attivi</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">127</div>
+                        <div class="stat-label">Sensori Ambientali</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Hotspot Identificati</div>
+                    </div>
+                </div>
+
+                <!-- Mappa Principale -->
+                <div id="mainMap" class="map-container"></div>
+            </div>
+
+            <!-- Analisi per Regione -->
+            <div class="geographic-section">
+                <h3 class="section-header">🎯 Analisi Regionale Dettagliata</h3>
+                <div class="region-analysis">
+                    <!-- Molise -->
+                    <div class="region-card molise">
+                        <div class="region-header">
+                            <div class="region-name">Molise</div>
+                            <div style="font-size: 2rem;">🏔️</div>
+                        </div>
+                        <div class="region-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">180</div>
+                                <div class="metric-label">Casi Influenza</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">8</div>
+                                <div class="metric-label">Casi Legionellosi</div>
+                            </div>
+                        </div>
+                        <div class="risk-factors">
+                            <div class="factors-title">Fattori di Rischio Prevalenti:</div>
+                            <div class="factor-list">
+                                <span class="factor-tag">PM2.5 Alto</span>
+                                <span class="factor-tag">Inversione Termica</span>
+                                <span class="factor-tag">Bassa Ventilazione</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campania -->
+                    <div class="region-card campania">
+                        <div class="region-header">
+                            <div class="region-name">Campania</div>
+                            <div style="font-size: 2rem;">🌋</div>
+                        </div>
+                        <div class="region-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">95</div>
+                                <div class="metric-label">Casi Influenza</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">28</div>
+                                <div class="metric-label">Casi Legionellosi</div>
+                            </div>
+                        </div>
+                        <div class="risk-factors">
+                            <div class="factors-title">Fattori di Rischio Prevalenti:</div>
+                            <div class="factor-list">
+                                <span class="factor-tag">Densità Urbana</span>
+                                <span class="factor-tag">Temp. Acqua Elevata</span>
+                                <span class="factor-tag">Umidità Alta</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calabria -->
+                    <div class="region-card calabria">
+                        <div class="region-header">
+                            <div class="region-name">Calabria</div>
+                            <div style="font-size: 2rem;">🏖️</div>
+                        </div>
+                        <div class="region-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">25</div>
+                                <div class="metric-label">Casi Influenza</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">2</div>
+                                <div class="metric-label">Casi Epatite A</div>
+                            </div>
+                        </div>
+                        <div class="risk-factors">
+                            <div class="factors-title">Fattori di Rischio Prevalenti:</div>
+                            <div class="factor-list">
+                                <span class="factor-tag">Qualità Idrica</span>
+                                <span class="factor-tag">Sicurezza Alimentare</span>
+                                <span class="factor-tag">Precipitazioni</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hotspot Analysis -->
+            <div class="geographic-section">
+                <h3 class="section-header">🔥 Mappa Hotspot e Cluster</h3>
+                <div id="hotspotMap" class="hotspot-map"></div>
+                
+                <!-- Distribuzione Incidenza -->
+                <div class="chart-container">
+                    <canvas id="incidenceDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Analisi Spazio-Temporale -->
+            <div class="geographic-section">
+                <h3 class="section-header">⏱️ Analisi Spazio-Temporale</h3>
+                <div class="chart-container">
+                    <canvas id="spatioTemporalChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Piattaforma HealthTrace v2.0 - Analisi Geografica delle Malattie Infettive</p>
+            <p>Dati Sintetici per Dimostrazione - Molise, Campania, Calabria</p>
+        </div>
+    </footer>
+
+    <script>
+        // URL Base API
+        const API_BASE = 'http://localhost:8003';
+        
+        // Dati geografici sintetici
+        const regioniData = {
+            molise: {
+                center: [41.7, 14.6],
+                casi: { influenza: 180, legionellosi: 8, epatite_a: 0 },
+                fattori_rischio: ['PM2.5', 'Inversione Termica', 'Bassa Ventilazione']
+            },
+            campania: {
+                center: [40.8, 14.2],
+                casi: { influenza: 95, legionellosi: 28, epatite_a: 0 },
+                fattori_rischio: ['Densità Urbana', 'Temperatura Acqua', 'Umidità Alta']
+            },
+            calabria: {
+                center: [39.3, 16.2],
+                casi: { influenza: 25, legionellosi: 12, epatite_a: 2 },
+                fattori_rischio: ['Qualità Idrica', 'Sicurezza Alimentare', 'Precipitazioni']
+            }
+        };
+
+        // Hotspot data
+        const hotspotData = [
+            { lat: 41.5603, lng: 14.6685, intensity: 15, type: 'influenza', region: 'Molise - Campobasso' },
+            { lat: 40.8518, lng: 14.2681, intensity: 8, type: 'legionellosi', region: 'Campania - Napoli' },
+            { lat: 39.2986, lng: 16.2543, intensity: 3, type: 'epatite_a', region: 'Calabria - Cosenza' },
+            { lat: 41.4691, lng: 14.9806, intensity: 6, type: 'influenza', region: 'Molise - Termoli' },
+            { lat: 40.6340, lng: 14.6033, intensity: 4, type: 'legionellosi', region: 'Campania - Salerno' }
+        ];
+
+        // Inizializza la pagina
+        async function inizializzaPagina() {
+            try {
+                await caricaDatiGeografici();
+                inizializzaMappa();
+                inizializzaMappaHotspot();
+                creaGraficoDistribuzioneIncidenza();
+                creaGraficoSpatioTemporale();
+            } catch (error) {
+                console.error('Errore nel caricamento:', error);
+                // Usa dati di fallback
+                inizializzaMappa();
+                inizializzaMappaHotspot();
+                creaGraficoDistribuzioneIncidenza();
+                creaGraficoSpatioTemporale();
+            }
+        }
+
+        // Carica dati geografici
+        async function caricaDatiGeografici() {
+            // Implementazione futura per dati reali
+            console.log('Caricamento dati geografici completato');
+        }
+
+        // Inizializza mappa principale
+        function inizializzaMappa() {
+            const map = L.map('mainMap').setView([40.5, 15.5], 7);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Aggiungi marker per le regioni
+            Object.entries(regioniData).forEach(([regione, data]) => {
+                const totalCasi = Object.values(data.casi).reduce((a, b) => a + b, 0);
+                
+                const marker = L.circleMarker(data.center, {
+                    radius: Math.sqrt(totalCasi) * 2,
+                    fillColor: getColorByRegion(regione),
+                    color: '#000',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.7
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <strong>${regione.toUpperCase()}</strong><br>
+                    Influenza: ${data.casi.influenza}<br>
+                    Legionellosi: ${data.casi.legionellosi}<br>
+                    Epatite A: ${data.casi.epatite_a}<br>
+                    <em>Totale: ${totalCasi} casi</em>
+                `);
+            });
+        }
+
+        // Inizializza mappa hotspot
+        function inizializzaMappaHotspot() {
+            const map = L.map('hotspotMap').setView([40.5, 15.5], 7);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Aggiungi hotspot
+            hotspotData.forEach(hotspot => {
+                const marker = L.circleMarker([hotspot.lat, hotspot.lng], {
+                    radius: hotspot.intensity,
+                    fillColor: getColorByType(hotspot.type),
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <strong>Hotspot ${hotspot.type}</strong><br>
+                    ${hotspot.region}<br>
+                    Intensità: ${hotspot.intensity} casi<br>
+                    <em>Monitoraggio attivo</em>
+                `);
+            });
+        }
+
+        // Funzioni helper per colori
+        function getColorByRegion(regione) {
+            const colors = {
+                molise: '#f44336',
+                campania: '#2196F3',
+                calabria: '#4CAF50'
+            };
+            return colors[regione] || '#666';
+        }
+
+        function getColorByType(type) {
+            const colors = {
+                influenza: '#f44336',
+                legionellosi: '#2196F3',
+                epatite_a: '#4CAF50'
+            };
+            return colors[type] || '#666';
+        }
+
+        // Grafico distribuzione incidenza
+        function creaGraficoDistribuzioneIncidenza() {
+            const ctx = document.getElementById('incidenceDistributionChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Molise', 'Campania', 'Calabria'],
+                    datasets: [
+                        {
+                            label: 'Influenza',
+                            data: [180, 95, 25],
+                            backgroundColor: 'rgba(244, 67, 54, 0.7)',
+                            borderColor: 'rgba(244, 67, 54, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Legionellosi',
+                            data: [8, 28, 12],
+                            backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                            borderColor: 'rgba(33, 150, 243, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Epatite A',
+                            data: [0, 0, 2],
+                            backgroundColor: 'rgba(76, 175, 80, 0.7)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribuzione Geografica Casi per Malattia',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#2E7D32'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Numero Casi'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Regioni'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Grafico spazio-temporale
+        function creaGraficoSpatioTemporale() {
+            const ctx = document.getElementById('spatioTemporalChart').getContext('2d');
+            
+            // Dati temporali simulati per le ultime 12 settimane
+            const settimane = [];
+            const now = new Date();
+            for (let i = 11; i >= 0; i--) {
+                const data = new Date(now);
+                data.setDate(data.getDate() - i * 7);
+                settimane.push(`Sett. ${data.getDate()}/${data.getMonth() + 1}`);
+            }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: settimane,
+                    datasets: [
+                        {
+                            label: 'Molise - Incidenza',
+                            data: [12, 15, 18, 22, 28, 35, 42, 38, 31, 28, 25, 23],
+                            borderColor: '#f44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Campania - Incidenza',
+                            data: [8, 10, 12, 15, 18, 22, 25, 23, 20, 18, 16, 14],
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Calabria - Incidenza',
+                            data: [3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4],
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Evoluzione Spazio-Temporale - Incidenza per 100.000 abitanti',
+                            font: { size: 16, weight: 'bold' },
+                            color: '#2E7D32'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Incidenza per 100.000 ab.'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Periodo (Settimane)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            });
+        }
+
+        // Inizializza al caricamento pagina
+        document.addEventListener('DOMContentLoaded', inizializzaPagina);
+    </script>
+</body>
+</html>

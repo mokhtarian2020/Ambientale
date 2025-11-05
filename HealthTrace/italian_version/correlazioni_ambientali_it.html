@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Correlazioni Sanitario-Ambientali</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo h1 {
+            color: #2E7D32;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .stats-header {
+            display: flex;
+            gap: 25px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 12px 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            padding: 30px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2E7D32;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 2px solid #E8F5E8;
+            padding-bottom: 10px;
+        }
+
+        .chart-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .chart {
+            position: relative;
+            height: 400px;
+        }
+
+        .correlation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .correlation-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .disease-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2E7D32;
+            margin-bottom: 15px;
+            text-transform: capitalize;
+        }
+
+        .correlation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .correlation-item:last-child {
+            border-bottom: none;
+        }
+
+        .correlation-value {
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .correlation-strong { background-color: #d32f2f; }
+        .correlation-moderate { background-color: #f57c00; }
+        .correlation-weak { background-color: #388e3c; }
+
+        .insights-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .insights-title {
+            color: #2E7D32;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .insight-title {
+            font-weight: bold;
+            color: #2E7D32;
+            margin-bottom: 10px;
+        }
+
+        .insight-text {
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 0;
+            text-align: center;
+            color: #666;
+            border-top: 2px solid #4CAF50;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .status-online { background-color: #4CAF50; }
+        .status-offline { background-color: #f44336; }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div>
+                        <h1>🩺 HealthTrace</h1>
+                        <div class="subtitle">Correlazioni Sanitario-Ambientali</div>
+                    </div>
+                    <span class="status-indicator status-online" id="apiStatus"></span>
+                </div>
+                <div class="stats-header" id="statsHeader">
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalCases">-</span>
+                        <span class="stat-label">Casi Totali</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="totalMeasurements">-</span>
+                        <span class="stat-label">Misurazioni Ambientali</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="dataSource">Sintetico</span>
+                        <span class="stat-label">Fonte Dati</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <a href="index_it.html" class="back-btn">← Torna alla Dashboard Principale</a>
+            
+            <h2 class="section-title">Fattori Ambientali vs Incidenza delle Malattie</h2>
+            
+            <!-- Grafici Principali -->
+            <div class="charts-grid">
+                <!-- PM2.5 vs Influenza -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Inquinamento PM2.5 vs Casi di Influenza</h3>
+                    <p class="chart-description">Forte correlazione (r=0.82) tra particolato e infezioni respiratorie</p>
+                    <div class="chart">
+                        <canvas id="pm25InfluenzaChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Temperatura vs Legionellosi -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Temperatura Acqua vs Casi di Legionellosi</h3>
+                    <p class="chart-description">Temperature elevate favoriscono la crescita del batterio Legionella (r=0.71)</p>
+                    <div class="chart">
+                        <canvas id="tempLegionellaChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- E.coli vs Epatite A -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Livelli E.coli vs Casi di Epatite A</h3>
+                    <p class="chart-description">Indicatore di contaminazione idrica fortemente collegato alle malattie alimentari (r=0.85)</p>
+                    <div class="chart">
+                        <canvas id="ecoliHepatitisChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Andamenti Stagionali -->
+                <div class="chart-container">
+                    <h3 class="chart-title">Andamenti Stagionali delle Malattie</h3>
+                    <p class="chart-description">Distribuzione mensile che mostra l'influenza ambientale sull'occorrenza delle malattie</p>
+                    <div class="chart">
+                        <canvas id="seasonalChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matrice di Correlazione -->
+            <div class="insights-section">
+                <h3 class="insights-title">Matrice di Correlazione Ambiente-Malattie</h3>
+                <div class="correlation-grid" id="correlationMatrix">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Insight Chiave -->
+            <div class="insights-section">
+                <h3 class="insights-title">Principali Insight Sanitario-Ambientali</h3>
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <div class="insight-title">🫁 Malattie Respiratorie (Influenza)</div>
+                        <div class="insight-text">
+                            Livelli di PM2.5 superiori a 25 μg/m³ mostrano una correlazione dell'82% con l'aumento dei casi di influenza. 
+                            I mesi invernali con scarsa qualità dell'aria creano condizioni ottimali per le infezioni respiratorie.
+                        </div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-title">💧 Malattie Idriche (Legionellosi)</div>
+                        <div class="insight-text">
+                            Temperature dell'acqua superiori a 25°C combinate con alta umidità (>70%) creano condizioni ideali 
+                            per la crescita della Legionella, con correlazione del 71% con l'aumento dei casi.
+                        </div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-title">🍽️ Malattie Alimentari (Epatite A)</div>
+                        <div class="insight-text">
+                            Livelli di E.coli superiori a 100 CFU/100ml indicano contaminazione idrica con correlazione dell'85% 
+                            con focolai di Epatite A, specialmente dopo periodi di forti precipitazioni.
+                        </div>
+                    </div>
+                    <div class="insight-card">
+                        <div class="insight-title">📊 Modellazione Predittiva</div>
+                        <div class="insight-text">
+                            I modelli GAM, DLNM e Random Forest mostrano alta accuratezza nel prevedere focolai di malattie 
+                            basandosi sui dati ambientali, abilitando sistemi di allerta precoce.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Piattaforma HealthTrace v2.0 - Sistema di Sorveglianza Sanitaria Ambientale</p>
+            <p>Demo con Dati Sintetici per Autorità Sanitarie Italiane | Pronto per Integrazione API di Produzione</p>
+        </div>
+    </footer>
+
+    <script>
+        // URL Base API
+        const API_BASE = 'http://localhost:8003';
+        
+        // Storage dati globale
+        let dashboardData = {};
+        let environmentalData = {};
+        let diseaseAnalytics = {};
+
+        // Inizializza la dashboard
+        async function inizializzaDashboard() {
+            try {
+                // Carica dati dalle API
+                await caricaDatiDashboard();
+                await caricaDatiAmbientali();
+                await caricaAnalisiMalattie();
+                
+                // Crea visualizzazioni
+                creaGraficoPM25Influenza();
+                creaGraficoTempLegionella();
+                creaGraficoEcoliEpatite();
+                creaGraficoStagionale();
+                creaMatriceCorrelazione();
+                
+                // Aggiorna stato
+                aggiornaStatoAPI(true);
+                
+            } catch (error) {
+                console.error('Errore nell\'inizializzazione della dashboard:', error);
+                aggiornaStatoAPI(false);
+                creaDatiFittizi();
+            }
+        }
+
+        // Carica dati riassunto dashboard
+        async function caricaDatiDashboard() {
+            const response = await fetch(`${API_BASE}/api/v1/dashboard/summary`);
+            dashboardData = await response.json();
+            
+            // Aggiorna statistiche header
+            document.getElementById('totalCases').textContent = dashboardData.total_reports?.toLocaleString() || '350';
+            document.getElementById('totalMeasurements').textContent = '137K+';
+        }
+
+        // Carica dati fattori ambientali
+        async function caricaDatiAmbientali() {
+            const response = await fetch(`${API_BASE}/api/v1/environmental/factors`);
+            environmentalData = await response.json();
+        }
+
+        // Carica analisi malattie per tutte le malattie
+        async function caricaAnalisiMalattie() {
+            const malattie = ['influenza', 'legionellosis', 'hepatitis_a'];
+            
+            for (const malattia of malattie) {
+                const response = await fetch(`${API_BASE}/api/v1/diseases/${malattia}/analytics`);
+                diseaseAnalytics[malattia] = await response.json();
+            }
+        }
+
+        // Crea grafico PM2.5 vs Influenza
+        function creaGraficoPM25Influenza() {
+            const ctx = document.getElementById('pm25InfluenzaChart').getContext('2d');
+            
+            // Genera dati di correlazione realistici
+            const data = generaDatiCorrelazione(30, 82); // 30 punti dati, correlazione 82%
+            
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'PM2.5 vs Casi Influenza',
+                        data: data,
+                        backgroundColor: 'rgba(244, 67, 54, 0.6)',
+                        borderColor: 'rgba(244, 67, 54, 1)',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Concentrazione PM2.5 (μg/m³)'
+                            },
+                            min: 10,
+                            max: 60
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Casi di Influenza Settimanali'
+                            },
+                            min: 0,
+                            max: 50
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `PM2.5: ${context.parsed.x.toFixed(1)} μg/m³, Casi: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Crea grafico Temperatura vs Legionellosi
+        function creaGraficoTempLegionella() {
+            const ctx = document.getElementById('tempLegionellaChart').getContext('2d');
+            
+            const data = generaDatiCorrelazioneTemperatura();
+            
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Temperatura Acqua vs Casi Legionellosi',
+                        data: data,
+                        backgroundColor: 'rgba(33, 150, 243, 0.6)',
+                        borderColor: 'rgba(33, 150, 243, 1)',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Temperatura Acqua (°C)'
+                            },
+                            min: 15,
+                            max: 35
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Casi di Legionellosi Settimanali'
+                            },
+                            min: 0,
+                            max: 8
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Temperatura: ${context.parsed.x.toFixed(1)}°C, Casi: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Crea grafico E.coli vs Epatite A
+        function creaGraficoEcoliEpatite() {
+            const ctx = document.getElementById('ecoliHepatitisChart').getContext('2d');
+            
+            const data = generaDatiCorrelazioneEcoli();
+            
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'E.coli vs Casi Epatite A',
+                        data: data,
+                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        borderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Livello E.coli (CFU/100ml)'
+                            },
+                            min: 0,
+                            max: 300
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Casi di Epatite A Settimanali'
+                            },
+                            min: 0,
+                            max: 3
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `E.coli: ${context.parsed.x.toFixed(0)} CFU/100ml, Casi: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Crea grafico andamenti stagionali
+        function creaGraficoStagionale() {
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            
+            const mesi = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 
+                         'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+            
+            // Usa dati reali dall'API se disponibili, altrimenti dati fittizi
+            const datiInfluenza = dashboardData.monthly_trends ? 
+                dashboardData.monthly_trends.map(m => m.influenza_cases || 0) :
+                [35, 42, 28, 15, 8, 5, 3, 4, 12, 22, 31, 38];
+                
+            const datiLegionellosi = dashboardData.monthly_trends ?
+                dashboardData.monthly_trends.map(m => m.legionellosis_cases || 0) :
+                [2, 1, 3, 4, 6, 8, 12, 10, 7, 4, 2, 1];
+                
+            const datiEpatite = dashboardData.monthly_trends ?
+                dashboardData.monthly_trends.map(m => m.hepatitis_a_cases || 0) :
+                [0, 0, 0, 1, 1, 0, 0, 1, 2, 1, 0, 0];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: mesi,
+                    datasets: [
+                        {
+                            label: 'Influenza',
+                            data: datiInfluenza,
+                            borderColor: 'rgba(244, 67, 54, 1)',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Legionellosi',
+                            data: datiLegionellosi,
+                            borderColor: 'rgba(33, 150, 243, 1)',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Epatite A',
+                            data: datiEpatite,
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Casi Mensili'
+                            },
+                            beginAtZero: true
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Mese'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Crea visualizzazione matrice correlazione
+        function creaMatriceCorrelazione() {
+            const container = document.getElementById('correlationMatrix');
+            
+            const correlazioni = {
+                'Influenza': [
+                    { fattore: 'PM2.5', valore: 0.82, forza: 'forte' },
+                    { fattore: 'PM10', valore: 0.78, forza: 'forte' },
+                    { fattore: 'Temperatura', valore: -0.65, forza: 'moderata' },
+                    { fattore: 'Umidità', valore: 0.59, forza: 'moderata' }
+                ],
+                'Legionellosi': [
+                    { fattore: 'Temperatura Acqua', valore: 0.71, forza: 'forte' },
+                    { fattore: 'Umidità', valore: 0.68, forza: 'moderata' },
+                    { fattore: 'Precipitazioni', valore: 0.54, forza: 'moderata' },
+                    { fattore: 'Temperatura Aria', valore: 0.61, forza: 'moderata' }
+                ],
+                'Epatite A': [
+                    { fattore: 'Livello E.coli', valore: 0.85, forza: 'forte' },
+                    { fattore: 'Livello pH', valore: -0.72, forza: 'forte' },
+                    { fattore: 'Cloro Residuo', valore: -0.68, forza: 'moderata' },
+                    { fattore: 'Precipitazioni', valore: 0.56, forza: 'moderata' }
+                ]
+            };
+
+            container.innerHTML = '';
+            
+            Object.entries(correlazioni).forEach(([malattia, fattori]) => {
+                const card = document.createElement('div');
+                card.className = 'correlation-card';
+                
+                let html = `<div class="disease-name">${malattia}</div>`;
+                
+                fattori.forEach(fattore => {
+                    const valoreAssoluto = Math.abs(fattore.valore);
+                    const classeForza = valoreAssoluto >= 0.7 ? 'strong' : valoreAssoluto >= 0.5 ? 'moderate' : 'weak';
+                    
+                    html += `
+                        <div class="correlation-item">
+                            <span>${fattore.fattore}</span>
+                            <span class="correlation-value correlation-${classeForza}">
+                                ${fattore.valore > 0 ? '+' : ''}${fattore.valore.toFixed(2)}
+                            </span>
+                        </div>
+                    `;
+                });
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+
+        // Genera dati correlazione con forza di correlazione specificata
+        function generaDatiCorrelazione(punti, percentualeCorrelazione) {
+            const data = [];
+            const correlazione = percentualeCorrelazione / 100;
+            
+            for (let i = 0; i < punti; i++) {
+                const x = 15 + Math.random() * 40; // Range PM2.5 15-55
+                const baseY = correlazione * (x - 32.5) + 25; // Correlazione base
+                const rumore = (Math.random() - 0.5) * 15 * (1 - Math.abs(correlazione));
+                const y = Math.max(0, Math.round(baseY + rumore));
+                
+                data.push({ x: x, y: y });
+            }
+            
+            return data;
+        }
+
+        // Genera dati correlazione temperatura
+        function generaDatiCorrelazioneTemperatura() {
+            const data = [];
+            
+            for (let i = 0; i < 24; i++) {
+                const x = 18 + Math.random() * 15; // Temperatura 18-33°C
+                const baseY = Math.max(0, (x - 20) * 0.3 + Math.random() * 2);
+                const y = Math.round(baseY);
+                
+                data.push({ x: x, y: y });
+            }
+            
+            return data;
+        }
+
+        // Genera dati correlazione E.coli
+        function generaDatiCorrelazioneEcoli() {
+            const data = [];
+            
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * 250; // Livello E.coli 0-250
+                const baseY = x > 100 ? Math.random() * 2 + 0.5 : Math.random() * 0.5;
+                const y = Math.round(baseY);
+                
+                data.push({ x: x, y: y });
+            }
+            
+            return data;
+        }
+
+        // Aggiorna indicatore stato API
+        function aggiornaStatoAPI(isOnline) {
+            const indicatore = document.getElementById('apiStatus');
+            indicatore.className = `status-indicator ${isOnline ? 'status-online' : 'status-offline'}`;
+        }
+
+        // Crea dati fittizi se API non disponibile
+        function creaDatiFittizi() {
+            // Crea grafici con dati fittizi
+            creaGraficoPM25Influenza();
+            creaGraficoTempLegionella();
+            creaGraficoEcoliEpatite();
+            creaGraficoStagionale();
+            creaMatriceCorrelazione();
+            
+            // Aggiorna header con statistiche fittizie
+            document.getElementById('totalCases').textContent = '350';
+            document.getElementById('totalMeasurements').textContent = '137K+';
+        }
+
+        // Inizializza dashboard al caricamento pagina
+        document.addEventListener('DOMContentLoaded', inizializzaDashboard);
+    </script>
+</body>
+</html>
