@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Real Database Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .header h1 {
+            color: #2E7D32;
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            text-align: center;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            color: #2E7D32;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background-color: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-disconnected {
+            background-color: #f44336;
+        }
+
+        .status-loading {
+            background-color: #ff9800;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+        }
+
+        .data-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .data-row {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 HealthTrace - Real Database Integration</h1>
+        <p>Connection to GESAN Malattie Infettive Database (10.10.13.11)</p>
+    </div>
+
+    <div class="container">
+        <!-- Connection Status Card -->
+        <div class="card">
+            <h3>🔌 Database Connection Status</h3>
+            <div id="connection-status">
+                <span class="status-indicator status-loading"></span>
+                <span>Checking connection...</span>
+            </div>
+            
+            <div class="code-block">
+                Server: 10.10.13.11:5432<br>
+                Database: gesan_malattieinfettive<br>
+                User: postgres<br>
+                Status: <span id="connection-detail">Connecting...</span>
+            </div>
+
+            <button class="btn" onclick="checkConnectionStatus()">🔄 Refresh Status</button>
+            <button class="btn btn-secondary" onclick="exploreSchema()">🔍 Explore Schema</button>
+        </div>
+
+        <!-- Database Statistics Card -->
+        <div class="card">
+            <h3>📊 Database Statistics</h3>
+            <div id="statistics-loading" class="alert alert-warning" style="display: none;">
+                Loading statistics from real database...
+            </div>
+            
+            <div class="stats-grid" id="stats-container">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-cases">-</div>
+                    <div class="stat-label">Total Cases</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="recent-cases">-</div>
+                    <div class="stat-label">Recent Cases (30d)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-tables">-</div>
+                    <div class="stat-label">Database Tables</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="data-sources">-</div>
+                    <div class="stat-label">Data Sources</div>
+                </div>
+            </div>
+
+            <button class="btn" onclick="loadStatistics()">📈 Load Statistics</button>
+        </div>
+
+        <!-- Query Interface Card -->
+        <div class="card full-width">
+            <h3>🔍 Query Real Disease Data</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label for="disease-filter">Disease Type</label>
+                    <select id="disease-filter" class="form-control">
+                        <option value="">All Diseases</option>
+                        <option value="influenza">Influenza</option>
+                        <option value="legionella">Legionellosis</option>
+                        <option value="epatite">Hepatitis A</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="start-date">Start Date</label>
+                    <input type="date" id="start-date" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="end-date">End Date</label>
+                    <input type="date" id="end-date" class="form-control">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label for="istat-code">ISTAT Code</label>
+                    <input type="text" id="istat-code" class="form-control" placeholder="e.g., 063049">
+                </div>
+                
+                <div class="form-group">
+                    <label for="region-filter">Region</label>
+                    <select id="region-filter" class="form-control">
+                        <option value="">All Regions</option>
+                        <option value="Campania">Campania</option>
+                        <option value="Molise">Molise</option>
+                        <option value="Calabria">Calabria</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="limit">Limit Results</label>
+                    <select id="limit" class="form-control">
+                        <option value="100">100 records</option>
+                        <option value="500">500 records</option>
+                        <option value="1000">1000 records</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="btn" onclick="queryDiseaseData()">🔍 Query Disease Data</button>
+                <button class="btn btn-secondary" onclick="queryWithCoordinates()">📍 Query with Coordinates</button>
+                <button class="btn btn-warning" onclick="clearResults()">🗑️ Clear Results</button>
+            </div>
+
+            <div id="query-results" class="data-container" style="display: none;">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+
+        <!-- Schema Explorer Card -->
+        <div class="card full-width" id="schema-card" style="display: none;">
+            <h3>🗄️ Database Schema</h3>
+            <div id="schema-content" class="data-container">
+                <!-- Schema information will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8002/api/v1';
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkConnectionStatus();
+            
+            // Set default date range (last 30 days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            
+            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+        });
+
+        // Check database connection status
+        async function checkConnectionStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/real-disease-db/real-db/status`);
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('connection-status');
+                const detailElement = document.getElementById('connection-detail');
+                
+                if (data.status === 'connected') {
+                    statusElement.innerHTML = '<span class="status-indicator status-connected"></span><span>Connected to Real Database</span>';
+                    detailElement.textContent = 'Connection successful';
+                    detailElement.style.color = '#4CAF50';
+                } else {
+                    statusElement.innerHTML = '<span class="status-indicator status-disconnected"></span><span>Connection Failed</span>';
+                    detailElement.textContent = data.message || 'Connection error';
+                    detailElement.style.color = '#f44336';
+                }
+                
+            } catch (error) {
+                console.error('Connection check failed:', error);
+                const statusElement = document.getElementById('connection-status');
+                const detailElement = document.getElementById('connection-detail');
+                
+                statusElement.innerHTML = '<span class="status-indicator status-disconnected"></span><span>Connection Error</span>';
+                detailElement.textContent = 'Network error or API unavailable';
+                detailElement.style.color = '#f44336';
+            }
+        }
+
+        // Load database statistics
+        async function loadStatistics() {
+            document.getElementById('statistics-loading').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/real-disease-db/real-db/statistics`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const stats = data.statistics;
+                    
+                    document.getElementById('total-cases').textContent = 
+                        stats.total_cases || 'N/A';
+                    document.getElementById('recent-cases').textContent = 
+                        stats.recent_cases || 'N/A';
+                    document.getElementById('total-tables').textContent = 
+                        stats.diseases_by_type ? stats.diseases_by_type.length : 'N/A';
+                    document.getElementById('data-sources').textContent = 
+                        stats.cases_by_region ? stats.cases_by_region.length : 'N/A';
+                } else {
+                    throw new Error(data.message || 'Statistics loading failed');
+                }
+                
+            } catch (error) {
+                console.error('Statistics loading failed:', error);
+                alert('Failed to load statistics: ' + error.message);
+            } finally {
+                document.getElementById('statistics-loading').style.display = 'none';
+            }
+        }
+
+        // Explore database schema
+        async function exploreSchema() {
+            try {
+                const response = await fetch(`${API_BASE}/real-disease-db/real-db/schema`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const schema = data.schema_exploration;
+                    const schemaCard = document.getElementById('schema-card');
+                    const schemaContent = document.getElementById('schema-content');
+                    
+                    let html = '<h4>Database Schema Information</h4>';
+                    html += `<p><strong>Total Tables:</strong> ${schema.total_tables}</p>`;
+                    
+                    if (schema.tables) {
+                        schema.tables.forEach(table => {
+                            html += `
+                                <div class="data-row">
+                                    <h5>${table.table_name}</h5>
+                                    <p><strong>Rows:</strong> ${table.row_count}</p>
+                                    <p><strong>Columns:</strong> ${table.columns.length}</p>
+                                    <details>
+                                        <summary>Column Details</summary>
+                                        <ul>
+                                            ${table.columns.map(col => 
+                                                `<li><strong>${col.name}</strong>: ${col.type} ${col.nullable ? '(nullable)' : ''}</li>`
+                                            ).join('')}
+                                        </ul>
+                                    </details>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    schemaContent.innerHTML = html;
+                    schemaCard.style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'Schema exploration failed');
+                }
+                
+            } catch (error) {
+                console.error('Schema exploration failed:', error);
+                alert('Failed to explore schema: ' + error.message);
+            }
+        }
+
+        // Query disease data
+        async function queryDiseaseData() {
+            const params = new URLSearchParams();
+            
+            const diseaseFilter = document.getElementById('disease-filter').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const istatCode = document.getElementById('istat-code').value;
+            const regionFilter = document.getElementById('region-filter').value;
+            const limit = document.getElementById('limit').value;
+            
+            if (diseaseFilter) params.append('disease_type', diseaseFilter);
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (istatCode) params.append('istat_code', istatCode);
+            if (regionFilter) params.append('region', regionFilter);
+            params.append('limit', limit);
+            
+            try {
+                const response = await fetch(`${API_BASE}/real-disease-db/real-db/diseases?${params}`);
+                const data = await response.json();
+                
+                displayQueryResults(data);
+                
+            } catch (error) {
+                console.error('Query failed:', error);
+                alert('Query failed: ' + error.message);
+            }
+        }
+
+        // Query with coordinates (spatial)
+        async function queryWithCoordinates() {
+            const params = new URLSearchParams();
+            
+            const diseaseFilter = document.getElementById('disease-filter').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const limit = document.getElementById('limit').value;
+            
+            // Add Napoli bounding box as example
+            params.append('bbox', '14.25,40.85,14.30,40.90');  // Your Napoli polygon area
+            
+            if (diseaseFilter) params.append('disease_type', diseaseFilter);
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            params.append('limit', limit);
+            
+            try {
+                const response = await fetch(`${API_BASE}/real-disease-db/real-db/diseases/by-coordinates?${params}`);
+                const data = await response.json();
+                
+                displayQueryResults(data, true);
+                
+            } catch (error) {
+                console.error('Spatial query failed:', error);
+                alert('Spatial query failed: ' + error.message);
+            }
+        }
+
+        // Display query results
+        function displayQueryResults(data, isSpatial = false) {
+            const resultsContainer = document.getElementById('query-results');
+            
+            if (data.status !== 'success') {
+                resultsContainer.innerHTML = `<div class="alert alert-danger">${data.message || 'Query failed'}</div>`;
+                resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            let html = `
+                <div class="alert alert-success">
+                    Query successful! Found ${data.total_records} records
+                    ${isSpatial ? ' (with spatial filtering)' : ''}
+                </div>
+            `;
+            
+            if (data.summary) {
+                html += '<h4>📊 Query Summary</h4>';
+                html += `<p><strong>Total Records:</strong> ${data.summary.total_records}</p>`;
+                
+                if (data.summary.date_range) {
+                    html += `<p><strong>Date Range:</strong> ${data.summary.date_range.earliest} to ${data.summary.date_range.latest}</p>`;
+                }
+                
+                if (data.summary.disease_breakdown) {
+                    html += '<p><strong>Disease Types:</strong></p><ul>';
+                    Object.entries(data.summary.disease_breakdown).forEach(([disease, count]) => {
+                        html += `<li>${disease}: ${count} cases</li>`;
+                    });
+                    html += '</ul>';
+                }
+            }
+            
+            if (data.data && data.data.length > 0) {
+                html += '<h4>📋 Sample Records</h4>';
+                data.data.slice(0, 10).forEach((record, index) => {
+                    html += `
+                        <div class="data-row">
+                            <strong>Record ${index + 1}</strong><br>
+                            ${Object.entries(record).map(([key, value]) => 
+                                `<small><strong>${key}:</strong> ${value}</small>`
+                            ).join('<br>')}
+                        </div>
+                    `;
+                });
+                
+                if (data.data.length > 10) {
+                    html += `<p><em>... and ${data.data.length - 10} more records</em></p>`;
+                }
+            }
+            
+            resultsContainer.innerHTML = html;
+            resultsContainer.style.display = 'block';
+        }
+
+        // Clear results
+        function clearResults() {
+            document.getElementById('query-results').style.display = 'none';
+            document.getElementById('schema-card').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

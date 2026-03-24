@@ -47,6 +47,17 @@ pyGAM==0.9.0
 # DLNM (Distributed Lag Non-Linear Models)
 dlnm==0.2.0
 
+# Case-Crossover (Conditional Logistic Regression)
+# statsmodels already included above — provides ConditionalLogit
+# (statsmodels.discrete.conditional_models.ConditionalLogit)
+lifelines==0.27.8         # Survival analysis + conditional logistic support
+
+# LSTM / Deep Learning (Recurrent Neural Networks)
+tensorflow==2.15.0        # LSTM via tf.keras.layers.LSTM
+keras==2.15.0             # High-level LSTM API (bundled with TensorFlow)
+torch==2.1.2              # PyTorch alternative for LSTM (optional)
+torchvision==0.16.2       # PyTorch vision utilities (optional)
+
 # Visualization
 plotly==5.17.0
 folium==0.15.0

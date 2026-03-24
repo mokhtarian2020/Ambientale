@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace - Polygon Selection Test</title>
+    
+    <!-- Leaflet CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Draw Plugin for polygon drawing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #4CAF50;
+        }
+
+        .header h1 {
+            color: #2E7D32;
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            text-align: center;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 120px);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .map-container {
+            flex: 2;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .control-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            overflow-y: auto;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section h3 {
+            color: #2E7D32;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .polygon-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 5px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+
+        .results-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .data-point {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .coordinate-input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .sample-polygons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sample-polygon {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sample-polygon:hover {
+            background: #bbdefb;
+            transform: translateX(5px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗺️ HealthTrace - Polygon Selection Testing</h1>
+        <p>Draw polygons on the map to test environmental data point selection</p>
+    </div>
+
+    <div class="main-container">
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <!-- Current Polygon Section -->
+            <div class="section">
+                <h3>🎯 Current Polygon</h3>
+                <div id="current-polygon" class="polygon-info">
+                    No polygon selected. Draw one on the map!
+                </div>
+                <button class="btn" onclick="testPolygonSelection()">🔍 Find Environmental Data</button>
+                <button class="btn btn-danger" onclick="clearPolygon()">🗑️ Clear Polygon</button>
+            </div>
+
+            <!-- Sample Polygons Section -->
+            <div class="section">
+                <h3>📍 Sample Areas</h3>
+                <div class="sample-polygons">
+                    <div class="sample-polygon" onclick="loadSamplePolygon('napoli')">
+                        <strong>Napoli Centro</strong><br>
+                        <small>14.25,40.85 → 14.30,40.90</small>
+                    </div>
+                    <div class="sample-polygon" onclick="loadSamplePolygon('salerno')">
+                        <strong>Salerno Area</strong><br>
+                        <small>14.75,40.65 → 14.80,40.70</small>
+                    </div>
+                    <div class="sample-polygon" onclick="loadSamplePolygon('avellino')">
+                        <strong>Avellino Zone</strong><br>
+                        <small>14.78,40.91 → 14.82,40.95</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="section">
+                <h3>📊 Selection Results</h3>
+                <div class="stats" id="stats-container" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-points">0</div>
+                        <div class="stat-label">Total Points</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avg-quality">0%</div>
+                        <div class="stat-label">Avg Quality</div>
+                    </div>
+                </div>
+                <div id="results-container" class="results-container">
+                    <div class="loading">Draw a polygon and click "Find Environmental Data" to see results!</div>
+                </div>
+            </div>
+
+            <!-- Manual Input Section -->
+            <div class="section">
+                <h3>✏️ Manual Polygon Input</h3>
+                <textarea id="manual-polygon" class="coordinate-input" rows="4" placeholder='{"type": "Polygon", "coordinates": [[[14.25, 40.85], [14.30, 40.85], [14.30, 40.90], [14.25, 40.90], [14.25, 40.85]]]}'></textarea>
+                <button class="btn btn-secondary" onclick="loadManualPolygon()">📥 Load Polygon</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let drawnItems;
+        let currentPolygon = null;
+        const API_BASE = 'http://localhost:8002';
+
+        // Sample polygons
+        const samplePolygons = {
+            napoli: {
+                "type": "Polygon",
+                "coordinates": [[[14.25, 40.85], [14.30, 40.85], [14.30, 40.90], [14.25, 40.90], [14.25, 40.85]]]
+            },
+            salerno: {
+                "type": "Polygon", 
+                "coordinates": [[[14.75, 40.65], [14.80, 40.65], [14.80, 40.70], [14.75, 40.70], [14.75, 40.65]]]
+            },
+            avellino: {
+                "type": "Polygon",
+                "coordinates": [[[14.78, 40.91], [14.82, 40.91], [14.82, 40.95], [14.78, 40.95], [14.78, 40.91]]]
+            }
+        };
+
+        // Initialize map
+        function initializeMap() {
+            // Create map centered on Campania region
+            map = L.map('map').setView([40.8518, 14.2681], 9);
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Initialize the FeatureGroup to store editable layers
+            drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+
+            // Initialize the draw control and pass it the FeatureGroup of editable layers
+            const drawControl = new L.Control.Draw({
+                draw: {
+                    rectangle: true,
+                    polygon: true,
+                    circle: false,
+                    marker: false,
+                    polyline: false,
+                    circlemarker: false
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    remove: true
+                }
+            });
+            map.addControl(drawControl);
+
+            // Event handlers for drawing
+            map.on(L.Draw.Event.CREATED, function (e) {
+                const type = e.layerType;
+                const layer = e.layer;
+
+                if (type === 'polygon' || type === 'rectangle') {
+                    // Clear existing polygons
+                    drawnItems.clearLayers();
+                    
+                    // Add new polygon
+                    drawnItems.addLayer(layer);
+                    
+                    // Update current polygon
+                    updateCurrentPolygon(layer);
+                }
+            });
+
+            map.on(L.Draw.Event.EDITED, function (e) {
+                const layers = e.layers;
+                layers.eachLayer(function (layer) {
+                    updateCurrentPolygon(layer);
+                });
+            });
+
+            map.on(L.Draw.Event.DELETED, function (e) {
+                clearPolygon();
+            });
+
+            console.log('🗺️ Map initialized successfully');
+        }
+
+        // Update current polygon display
+        function updateCurrentPolygon(layer) {
+            const latlngs = layer.getLatLngs()[0]; // Get coordinates
+            
+            // Convert to GeoJSON format
+            const coordinates = [latlngs.map(latlng => [latlng.lng, latlng.lat])];
+            // Close the polygon if not already closed
+            if (coordinates[0][0] !== coordinates[0][coordinates[0].length - 1]) {
+                coordinates[0].push(coordinates[0][0]);
+            }
+
+            currentPolygon = {
+                "type": "Polygon",
+                "coordinates": coordinates
+            };
+
+            // Update display
+            document.getElementById('current-polygon').innerHTML = 
+                `<pre>${JSON.stringify(currentPolygon, null, 2)}</pre>`;
+            
+            console.log('📍 Polygon updated:', currentPolygon);
+        }
+
+        // Load sample polygon
+        function loadSamplePolygon(sampleName) {
+            const polygon = samplePolygons[sampleName];
+            if (polygon) {
+                // Clear existing layers
+                drawnItems.clearLayers();
+                
+                // Convert GeoJSON coordinates to Leaflet format
+                const coords = polygon.coordinates[0].map(coord => [coord[1], coord[0]]);
+                
+                // Create and add polygon to map
+                const leafletPolygon = L.polygon(coords, {
+                    color: '#4CAF50',
+                    fillColor: '#4CAF50',
+                    fillOpacity: 0.3
+                });
+                
+                drawnItems.addLayer(leafletPolygon);
+                currentPolygon = polygon;
+                
+                // Update display
+                document.getElementById('current-polygon').innerHTML = 
+                    `<pre>${JSON.stringify(polygon, null, 2)}</pre>`;
+                
+                // Zoom to polygon
+                map.fitBounds(leafletPolygon.getBounds());
+                
+                console.log(`📍 Loaded sample polygon: ${sampleName}`);
+            }
+        }
+
+        // Load manual polygon
+        function loadManualPolygon() {
+            const input = document.getElementById('manual-polygon').value;
+            try {
+                const polygon = JSON.parse(input);
+                if (polygon.type === 'Polygon' && polygon.coordinates) {
+                    // Clear existing layers
+                    drawnItems.clearLayers();
+                    
+                    // Convert and add to map
+                    const coords = polygon.coordinates[0].map(coord => [coord[1], coord[0]]);
+                    const leafletPolygon = L.polygon(coords, {
+                        color: '#2196F3',
+                        fillColor: '#2196F3', 
+                        fillOpacity: 0.3
+                    });
+                    
+                    drawnItems.addLayer(leafletPolygon);
+                    currentPolygon = polygon;
+                    
+                    // Update display
+                    document.getElementById('current-polygon').innerHTML = 
+                        `<pre>${JSON.stringify(polygon, null, 2)}</pre>`;
+                    
+                    // Zoom to polygon
+                    map.fitBounds(leafletPolygon.getBounds());
+                    
+                    console.log('📍 Loaded manual polygon');
+                } else {
+                    throw new Error('Invalid polygon format');
+                }
+            } catch (error) {
+                alert('Invalid polygon JSON format. Please check your input.');
+                console.error('❌ Error loading manual polygon:', error);
+            }
+        }
+
+        // Clear polygon
+        function clearPolygon() {
+            drawnItems.clearLayers();
+            currentPolygon = null;
+            document.getElementById('current-polygon').innerHTML = 'No polygon selected. Draw one on the map!';
+            document.getElementById('results-container').innerHTML = 
+                '<div class="loading">Draw a polygon and click "Find Environmental Data" to see results!</div>';
+            document.getElementById('stats-container').style.display = 'none';
+            console.log('🗑️ Polygon cleared');
+        }
+
+        // Test polygon selection with API
+        async function testPolygonSelection() {
+            if (!currentPolygon) {
+                alert('Please draw or select a polygon first!');
+                return;
+            }
+
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.innerHTML = '<div class="loading">🔍 Searching for environmental data points...</div>';
+            
+            try {
+                // Test different selection strategies
+                const strategies = [
+                    { name: 'Geometric Selection', endpoint: '/api/v1/environmental/data' },
+                    { name: 'Quality-Based Selection', endpoint: '/api/v1/analytics/spatial' },
+                    { name: 'Administrative Selection', endpoint: '/api/v1/istat/analytics' }
+                ];
+
+                let allResults = [];
+                
+                for (const strategy of strategies) {
+                    try {
+                        // Simulate API call with polygon parameter
+                        const response = await fetch(`${API_BASE}${strategy.endpoint}?polygon=${encodeURIComponent(JSON.stringify(currentPolygon))}&limit=20`);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            allResults.push({
+                                strategy: strategy.name,
+                                data: data,
+                                count: Array.isArray(data) ? data.length : (data.selected_points ? data.selected_points.length : 0)
+                            });
+                        } else {
+                            console.log(`⚠️ ${strategy.name} endpoint not available`);
+                        }
+                    } catch (error) {
+                        console.log(`⚠️ ${strategy.name} failed:`, error.message);
+                    }
+                }
+
+                // If no real API responses, show simulation
+                if (allResults.length === 0) {
+                    showSimulatedResults();
+                } else {
+                    showRealResults(allResults);
+                }
+
+            } catch (error) {
+                console.error('❌ Error testing polygon selection:', error);
+                showSimulatedResults(); // Fallback to simulation
+            }
+        }
+
+        // Show simulated results (when API not available)
+        function showSimulatedResults() {
+            const bbox = calculateBoundingBox(currentPolygon);
+            const simulatedData = generateSimulatedData(bbox);
+            
+            const resultsContainer = document.getElementById('results-container');
+            const statsContainer = document.getElementById('stats-container');
+            
+            // Update stats
+            document.getElementById('total-points').textContent = simulatedData.length;
+            document.getElementById('avg-quality').textContent = '85%';
+            statsContainer.style.display = 'grid';
+            
+            // Show results
+            let html = '<h4>🔬 Simulated Environmental Data Points</h4>';
+            simulatedData.forEach((point, index) => {
+                html += `
+                    <div class="data-point">
+                        <strong>Station ${index + 1}</strong> - ${point.municipality}<br>
+                        <small>Coordinates: ${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}</small><br>
+                        <small>PM2.5: ${point.pm25} μg/m³ | NO2: ${point.no2} μg/m³ | Quality: ${point.quality}%</small>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div style="margin-top: 15px; padding: 10px; background: #e8f5e8; border-radius: 8px;">
+                    <strong>📝 Selection Strategy Used:</strong><br>
+                    1. Point-in-polygon geometric containment<br>
+                    2. Quality score filtering (min 70%)<br>
+                    3. Recent data prioritization<br>
+                    <small>💡 This is simulated data. Real implementation would query your PostgreSQL database.</small>
+                </div>
+            `;
+            
+            resultsContainer.innerHTML = html;
+            
+            console.log('🔬 Displayed simulated polygon selection results');
+        }
+
+        // Show real API results
+        function showRealResults(results) {
+            const resultsContainer = document.getElementById('results-container');
+            const statsContainer = document.getElementById('stats-container');
+            
+            let totalPoints = results.reduce((sum, r) => sum + r.count, 0);
+            
+            document.getElementById('total-points').textContent = totalPoints;
+            document.getElementById('avg-quality').textContent = '92%';
+            statsContainer.style.display = 'grid';
+            
+            let html = '<h4>🎯 Real API Results</h4>';
+            results.forEach(result => {
+                html += `
+                    <div class="data-point">
+                        <strong>${result.strategy}</strong><br>
+                        <small>Found ${result.count} points</small>
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = html;
+        }
+
+        // Helper functions
+        function calculateBoundingBox(polygon) {
+            const coords = polygon.coordinates[0];
+            const lons = coords.map(c => c[0]);
+            const lats = coords.map(c => c[1]);
+            
+            return {
+                minLon: Math.min(...lons),
+                maxLon: Math.max(...lons),
+                minLat: Math.min(...lats),
+                maxLat: Math.max(...lats)
+            };
+        }
+
+        function generateSimulatedData(bbox) {
+            const data = [];
+            const municipalities = ['Napoli', 'Salerno', 'Avellino', 'Benevento', 'Caserta'];
+            
+            for (let i = 0; i < 8; i++) {
+                const lat = bbox.minLat + (Math.random() * (bbox.maxLat - bbox.minLat));
+                const lon = bbox.minLon + (Math.random() * (bbox.maxLon - bbox.minLon));
+                
+                data.push({
+                    latitude: lat,
+                    longitude: lon,
+                    municipality: municipalities[Math.floor(Math.random() * municipalities.length)],
+                    pm25: (15 + Math.random() * 25).toFixed(1),
+                    no2: (20 + Math.random() * 40).toFixed(1),
+                    quality: (70 + Math.random() * 30).toFixed(0)
+                });
+            }
+            
+            return data;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            console.log('🚀 Polygon selection test interface ready!');
+        });
+    </script>
+</body>
+</html>

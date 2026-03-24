@@ -9,6 +9,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 import uvicorn
 import json
+import os
+
+# Load province-specific data
+def load_province_data():
+    """Load province-specific data from JSON file"""
+    province_data_path = "../synthetic_data/province_data.json"
+    if os.path.exists(province_data_path):
+        with open(province_data_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return None
+
+# Global province data
+PROVINCE_DATA = load_province_data()
 
 app = FastAPI(
     title="API HealthTrace - Potenziata con Dati Sintetici",
@@ -19,7 +32,7 @@ app = FastAPI(
 # Middleware CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3200", "http://localhost:3000", "http://localhost:8080"],
+    allow_origins=["http://localhost:3200", "http://localhost:3000", "http://localhost:8080", "http://localhost:8004", "http://localhost:8005"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -638,6 +651,88 @@ async def ottieni_previsioni():
             "Calabria: Monitoraggio epatite A per piogge previste (confidenza 71%)"
         ],
         "timestamp_generazione": datetime.now().isoformat()
+    }
+
+# Province-specific endpoints
+@app.get("/api/v1/province/list")
+async def get_province_list():
+    """Ottieni lista di tutte le province disponibili"""
+    if not PROVINCE_DATA:
+        return {"errore": "Dati province non disponibili"}
+    
+    province_list = {}
+    for region, provinces in PROVINCE_DATA['data'].items():
+        province_list[region] = list(provinces.keys())
+    
+    return {
+        "regioni": province_list,
+        "totale_province": PROVINCE_DATA['metadata']['total_provinces'],
+        "ultimo_aggiornamento": PROVINCE_DATA['metadata']['generated_at']
+    }
+
+@app.get("/api/v1/province/{region}/{province}/correlazioni")
+async def get_province_correlations(region: str, province: str):
+    """Ottieni correlazioni ambientali per una provincia specifica"""
+    if not PROVINCE_DATA or region not in PROVINCE_DATA['data'] or province not in PROVINCE_DATA['data'][region]:
+        return {"errore": f"Dati non disponibili per {province}, {region}"}
+    
+    province_data = PROVINCE_DATA['data'][region][province]
+    
+    return {
+        "provincia": province,
+        "regione": region,
+        "riassunto": province_data['summary'],
+        "correlazioni": province_data['correlations'],
+        "dati_scatter": province_data['scatter_data'],
+        "dati_mensili": province_data['monthly_data'],
+        "caratteristiche_provincia": province_data['province_info']['characteristics'],
+        "popolazione": province_data['province_info']['population'],
+        "ultimo_aggiornamento": province_data['last_updated']
+    }
+
+@app.get("/api/v1/province/{region}/{province}/dashboard")
+async def get_province_dashboard(region: str, province: str):
+    """Ottieni dati dashboard per una provincia specifica"""
+    if not PROVINCE_DATA or region not in PROVINCE_DATA['data'] or province not in PROVINCE_DATA['data'][region]:
+        return {"errore": f"Dati non disponibili per {province}, {region}"}
+    
+    province_data = PROVINCE_DATA['data'][region][province]
+    summary = province_data['summary']
+    
+    return {
+        "provincia": province,
+        "regione": region,
+        "segnalazioni_totali": summary['total_cases'],
+        "casi_influenza": summary['total_influenza'],
+        "casi_legionellosi": summary['total_legionella'],
+        "casi_epatite_a": summary['total_hepatitis'],
+        "pm25_medio": summary['avg_pm25'],
+        "temperatura_media": summary['avg_temperature'],
+        "popolazione": province_data['province_info']['population'],
+        "dati_mensili": province_data['monthly_data'],
+        "ultimo_aggiornamento": province_data['last_updated']
+    }
+
+@app.get("/api/v1/province/all/summary")
+async def get_all_provinces_summary():
+    """Ottieni riassunto di tutte le province"""
+    if not PROVINCE_DATA:
+        return {"errore": "Dati province non disponibili"}
+    
+    summary = {}
+    for region, provinces in PROVINCE_DATA['data'].items():
+        summary[region] = {}
+        for province, data in provinces.items():
+            summary[region][province] = {
+                "casi_totali": data['summary']['total_cases'],
+                "pm25_medio": data['summary']['avg_pm25'],
+                "temperatura_media": data['summary']['avg_temperature'],
+                "popolazione": data['province_info']['population']
+            }
+    
+    return {
+        "riassunto_province": summary,
+        "metadati": PROVINCE_DATA['metadata']
     }
 
 if __name__ == "__main__":

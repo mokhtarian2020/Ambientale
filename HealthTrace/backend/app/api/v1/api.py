@@ -9,7 +9,8 @@ from app.api.v1.endpoints import (
     investigations,
     analytics,
     dashboard,
-    istat_analytics
+    istat_analytics,
+    real_disease_db
 )
 from app.pipeline.data_pipeline import pipeline_router
 
@@ -24,4 +25,5 @@ api_router.include_router(investigations.router, prefix="/investigations", tags=
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(istat_analytics.router, prefix="/", tags=["istat-analytics"])
+api_router.include_router(real_disease_db.router, prefix="/real-disease-db", tags=["real-disease-database"])
 api_router.include_router(pipeline_router, prefix="/pipeline", tags=["data-pipeline"])

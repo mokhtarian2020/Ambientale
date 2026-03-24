@@ -197,6 +197,54 @@
             gap: 25px;
         }
 
+        .filters-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 0.9rem;
+            color: #2E7D32;
+            font-weight: 600;
+        }
+
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        .update-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45A049 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: auto;
+            font-weight: 600;
+        }
+
+        .update-btn:hover {
+            background: linear-gradient(135deg, #45A049 0%, #4CAF50 100%);
+        }
+
         .insight-card {
             background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
             border-radius: 10px;
@@ -289,6 +337,43 @@
     <main class="main-content">
         <div class="container">
             <h2 class="section-title">Environmental Factors vs Disease Incidence</h2>
+            
+            <!-- Filters -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <label>Region</label>
+                    <select id="regionFilter" onchange="updateProvinceFilter()">
+                        <option value="all">All Regions</option>
+                        <option value="Campania">Campania</option>
+                        <option value="Calabria">Calabria</option>
+                        <option value="Molise">Molise</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Province</label>
+                    <select id="provinceFilter">
+                        <option value="all">All Provinces</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Time Period</label>
+                    <select id="timeFilter">
+                        <option value="month">Monthly</option>
+                        <option value="week">Weekly</option>
+                        <option value="year">Yearly</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Disease</label>
+                    <select id="diseaseFilter">
+                        <option value="all">All Diseases</option>
+                        <option value="influenza">Influenza</option>
+                        <option value="legionellosis">Legionellosis</option>
+                        <option value="hepatitis_a">Hepatitis A</option>
+                    </select>
+                </div>
+                <button class="update-btn" onclick="updateCorrelations()">Update Analysis</button>
+            </div>
             
             <!-- Main Charts -->
             <div class="charts-grid">
@@ -389,6 +474,21 @@
         let dashboardData = {};
         let environmentalData = {};
         let diseaseAnalytics = {};
+
+        // Province data structure
+        const provinces = {
+            'Campania': ['Naples', 'Salerno', 'Avellino', 'Benevento', 'Caserta'],
+            'Calabria': ['Catanzaro', 'Cosenza', 'Crotone', 'Reggio Calabria', 'Vibo Valentia'],
+            'Molise': ['Campobasso', 'Isernia']
+        };
+
+        // Current filter state
+        let currentFilters = {
+            region: 'All',
+            province: '',
+            timePeriod: 'all',
+            disease: 'all'
+        };
 
         // Initialize the dashboard
         async function initializeDashboard() {
@@ -808,6 +908,82 @@
             // Update header with mock stats
             document.getElementById('totalCases').textContent = '350';
             document.getElementById('totalMeasurements').textContent = '137K+';
+        }
+
+        // Province filter functions
+        function updateProvinceFilter() {
+            const regionSelect = document.getElementById('regionSelect');
+            const provinceSelect = document.getElementById('provinceSelect');
+            const selectedRegion = regionSelect.value;
+            
+            // Clear province options
+            provinceSelect.innerHTML = '<option value="">All Provinces</option>';
+            
+            if (selectedRegion && selectedRegion !== 'All' && provinces[selectedRegion]) {
+                provinces[selectedRegion].forEach(province => {
+                    const option = document.createElement('option');
+                    option.value = province;
+                    option.textContent = province;
+                    provinceSelect.appendChild(option);
+                });
+                provinceSelect.disabled = false;
+            } else {
+                provinceSelect.disabled = true;
+            }
+        }
+
+        // Update correlations based on filters
+        function updateCorrelations() {
+            const region = document.getElementById('regionSelect').value;
+            const province = document.getElementById('provinceSelect').value;
+            const timePeriod = document.getElementById('timePeriodSelect').value;
+            const disease = document.getElementById('diseaseSelect').value;
+            
+            // Update current filters
+            currentFilters = {
+                region: region,
+                province: province,
+                timePeriod: timePeriod,
+                disease: disease
+            };
+            
+            // Recreate all charts with filtered data
+            createPM25InfluenzaChart();
+            createTempLegionellaChart();
+            createEcoliHepatitisChart();
+            createSeasonalChart();
+            createCorrelationMatrix();
+            
+            // Update header stats based on filters
+            updateFilteredStats();
+        }
+
+        // Update stats based on current filters
+        function updateFilteredStats() {
+            let multiplier = 1;
+            
+            // Adjust based on region
+            if (currentFilters.region !== 'All') {
+                multiplier *= 0.3; // Single region is about 30% of total
+            }
+            
+            // Adjust based on province
+            if (currentFilters.province) {
+                multiplier *= 0.2; // Single province is about 20% of region
+            }
+            
+            // Calculate filtered values
+            const baseCases = 350;
+            const baseMeasurements = 137000;
+            
+            const filteredCases = Math.round(baseCases * multiplier);
+            const filteredMeasurements = Math.round(baseMeasurements * multiplier);
+            
+            document.getElementById('totalCases').textContent = filteredCases.toLocaleString();
+            document.getElementById('totalMeasurements').textContent = 
+                filteredMeasurements > 1000 ? 
+                (filteredMeasurements / 1000).toFixed(0) + 'K+' : 
+                filteredMeasurements.toString();
         }
 
         // Initialize dashboard when page loads

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .loading { text-align: center; padding: 40px; color: #666; font-size: 1.2em; }
+        .content { display: none; }
+        .error { background: #f44336; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #4CAF50; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Dashboard - Diagnosi Problemi</h1>
+    
+    <div id="loading" class="loading">
+        🔄 Test caricamento in corso...
+    </div>
+    
+    <div id="error" class="error" style="display: none;"></div>
+    
+    <div id="content" class="content">
+        <div class="success">✅ JavaScript funziona correttamente!</div>
+        <div id="data-info"></div>
+    </div>
+
+    <script>
+        console.log('🚀 Script iniziato');
+        
+        // Test 1: Verifica che JavaScript base funzioni
+        setTimeout(function() {
+            console.log('⏰ Timeout funziona');
+            document.getElementById('loading').innerHTML = '🔄 JavaScript OK, testando fetch...';
+            
+            // Test 2: Verifica fetch API
+            fetch('/api/real-database/three-diseases-stats')
+                .then(response => {
+                    console.log('📡 Fetch response:', response.status);
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 Data loaded:', !!data);
+                    
+                    // Mostra risultati
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                    
+                    const info = document.getElementById('data-info');
+                    info.innerHTML = `
+                        <h3>✅ Test Risultati:</h3>
+                        <ul>
+                            <li><strong>Status:</strong> ${data.status}</li>
+                            <li><strong>Malattie:</strong> ${Object.keys(data.diseases || {}).length}</li>
+                            <li><strong>Metodo predizione:</strong> ${data.summary?.prediction_method}</li>
+                            <li><strong>Casi totali:</strong> ${data.summary?.total_cases_all_diseases}</li>
+                        </ul>
+                        <p><strong>🎯 Conclusione:</strong> Il sistema funziona! Il problema è nella dashboard complessa.</p>
+                    `;
+                })
+                .catch(error => {
+                    console.error('❌ Errore:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('error').style.display = 'block';
+                    document.getElementById('error').textContent = 'Errore: ' + error.message;
+                });
+        }, 1000);
+    </script>
+</body>
+</html>

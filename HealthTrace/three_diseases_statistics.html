@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiche Malattie Infettive - Influenza, Legionellosi, Epatite A</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .disease-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .disease-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .disease-card.influenza {
+            border-left: 5px solid #3498db;
+        }
+        
+        .disease-card.legionellosi {
+            border-left: 5px solid #e74c3c;
+        }
+        
+        .disease-card.hepatitis {
+            border-left: 5px solid #f39c12;
+        }
+        
+        .disease-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .disease-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .map-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        #diseaseMap {
+            height: 600px;
+            border-radius: 10px;
+        }
+        
+        .legend {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-back {
+            background: #95a5a6;
+        }
+        
+        .btn-back:hover {
+            background: #7f8c8d;
+        }
+        
+        .region-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .region-table th,
+        .region-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .region-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .region-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Time filter styles */
+        #applyFilter:hover {
+            background: linear-gradient(135deg, #0056b3, #003d82) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        
+        .time-filter-section input:focus,
+        .time-filter-section select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Statistiche Malattie Infettive</h1>
+            <p>Analisi territoriale di Influenza, Legionellosi ed Epatite A nelle Regioni Italiane</p>
+            <div>
+                <a href="/" class="btn btn-back">← Dashboard Principale</a>
+                <a href="#" id="refreshBtn" class="btn">🔄 Aggiorna Dati</a>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">
+            🔄 Caricamento dati dal database GESAN...
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="content" style="display: none;">
+            <!-- Debug status panel - uncomment for troubleshooting -->
+            <!--
+            <div id="debugStatus" style="background: #e8f4f8; border: 1px solid #bee5eb; border-radius: 5px; padding: 10px; margin-bottom: 20px; font-family: monospace; font-size: 12px;">
+                <strong>🔍 Debug Status:</strong>
+                <div id="debugLog">Loading...</div>
+            </div>
+            -->
+            
+            <!-- Panoramica generale -->
+            <div class="stats-overview" id="statsOverview"></div>
+            
+            <!-- Filtro Periodo Temporale -->
+            <div class="time-filter-section" style="margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6;">
+                <h3 style="margin: 0 0 15px 0; color: #495057; display: flex; align-items: center;">
+                    <span style="margin-right: 10px;">📅</span>
+                    Filtro Periodo Temporale
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                    <div>
+                        <label for="startDate" style="display: block; margin-bottom: 5px; font-weight: bold; color: #495057;">Data Inizio:</label>
+                        <input type="date" id="startDate" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label for="endDate" style="display: block; margin-bottom: 5px; font-weight: bold; color: #495057;">Data Fine:</label>
+                        <input type="date" id="endDate" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #495057;">Periodo Rapido:</label>
+                        <select id="quickPeriod" style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 5px; font-size: 14px;">
+                            <option value="">-- Seleziona Periodo --</option>
+                            <option value="last7days">Ultimi 7 giorni</option>
+                            <option value="last30days">Ultimo mese</option>
+                            <option value="last3months">Ultimi 3 mesi</option>
+                            <option value="last6months">Ultimi 6 mesi</option>
+                            <option value="last12months">Ultimo anno</option>
+                            <option value="last24months">Ultimi 2 anni</option>
+                            <option value="all">Tutti i dati</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button id="applyFilter" style="width: 100%; padding: 10px 20px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s;">
+                            🔍 Applica Filtro
+                        </button>
+                    </div>
+                </div>
+                <div id="filterStatus" style="margin-top: 10px; padding: 8px; background: #e7f3ff; border-left: 4px solid #007bff; border-radius: 4px; font-size: 13px; color: #495057;">
+                    📊 Visualizzando: <span id="filterStatusText">Tutti i dati disponibili</span>
+                </div>
+            </div>
+            
+            <!-- Grafici -->
+            <div class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-title">Distribuzione Casi per Malattia</div>
+                    <canvas id="diseaseDistributionChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Trend Mensili (Ultimi 24 Mesi)</div>
+                    <canvas id="monthlyTrendsChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Confronto Regionale Top 10</div>
+                    <canvas id="regionalComparisonChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">🔮 Previsioni Time Series (Prossimi 6 Mesi)</div>
+                    <canvas id="predictionChart"></canvas>
+                    <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em; color: #666;">
+                        <strong>📊 Metodologia Predittiva:</strong> Le previsioni utilizzano analisi time series con media mobile, 
+                        tasso di crescita e fattori stagionali. L'affidabilità diminuisce nel tempo (confidence level mostrato come trasparenza).
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">📈 Analisi Trend Storico vs Predizioni</div>
+                    <canvas id="historicalPredictionChart"></canvas>
+                    <div style="margin-top: 10px;">
+                        <label style="margin-right: 20px;">
+                            <input type="checkbox" id="showConfidenceIntervals" checked> Mostra intervalli di confidenza
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showSeasonalFactors" checked> Evidenzia fattori stagionali
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mappa interattiva -->
+            <div class="map-container">
+                <div class="chart-title">📍 Distribuzione Geografica Casi</div>
+                <div id="diseaseMap"></div>
+                <div class="legend" id="mapLegend"></div>
+            </div>
+            
+            <!-- Tabelle dettagliate -->
+            <div class="chart-container">
+                <div class="chart-title">Dettaglio per Codice ISTAT Comunale</div>
+                <div id="regionalTables"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let diseaseData = null;
+        let originalDiseaseData = null; // Store original unfiltered data
+        let map = null;
+        let miniMap = null;
+        let charts = {};
+        
+        // Time filter variables
+        let currentFilter = {
+            startDate: null,
+            endDate: null,
+            period: 'all'
+        };
+        
+        // Colori per le malattie
+        const diseaseColors = {
+            influenza: '#3498db',
+            legionellosi: '#e74c3c', 
+            hepatitis_a: '#f39c12'
+        };
+        
+        // Mappatura ISTAT codes alle coordinate (campione)
+        const istatCoordinates = {
+            '061007': [40.8518, 14.2681], // Napoli
+            '063049': [40.7589, 14.7947], // Salerno
+            '061032': [40.9538, 14.7841], // Caserta
+            '062012': [41.1171, 14.3285], // Campobasso
+            '015146': [38.1157, 13.3613], // Palermo
+            '058091': [38.1938, 15.5540], // Messina
+            '083048': [41.4651, 12.9036], // Rieti
+            '015063': [37.5079, 15.0830], // Catania
+        };
+
+        // Mappatura ISTAT codes ai nomi dei luoghi (Regione Campania)
+        const istatPlaceNames = {
+            // Provincia di Napoli (061xxx)
+            '061007': 'Napoli',
+            '061001': 'Acerra', 
+            '061002': 'Afragola',
+            '061003': 'Agerola',
+            '061004': 'Anacapri',
+            '061005': 'Arzano',
+            '061006': 'Bacoli',
+            '061008': 'Barano d\'Ischia',
+            '061009': 'Boscoreale',
+            '061010': 'Boscotrecase',
+            '061011': 'Brusciano',
+            '061012': 'Calvizzano',
+            '061013': 'Camposano',
+            '061014': 'Capri',
+            '061015': 'Carbonara di Nola',
+            '061016': 'Cardito',
+            '061017': 'Casalnuovo di Napoli',
+            '061018': 'Casamarciano',
+            '061019': 'Casamicciola Terme',
+            '061020': 'Casandrino',
+            '061021': 'Casavatore',
+            '061022': 'Castellammare di Stabia',
+            '061023': 'Castello di Cisterna',
+            '061024': 'Cercola',
+            '061025': 'Cicciano',
+            '061026': 'Cimitile',
+            '061027': 'Comiziano',
+            '061028': 'Crispano',
+            '061029': 'Ercolano',
+            '061030': 'Forio',
+            '061031': 'Frattamaggiore',
+            '061032': 'Frattaminore',
+            '061033': 'Giugliano in Campania',
+            '061034': 'Gragnano',
+            '061035': 'Grumo Nevano',
+            '061036': 'Ischia',
+            '061037': 'Lacco Ameno',
+            '061038': 'Lettere',
+            '061039': 'Liveri',
+            '061040': 'Mariglianella',
+            '061041': 'Marigliano',
+            '061042': 'Marano di Napoli',
+            '061043': 'Massa di Somma',
+            '061044': 'Melito di Napoli',
+            '061045': 'Meta',
+            '061046': 'Monte di Procida',
+            '061047': 'Mugnano di Napoli',
+            '061048': 'Nola',
+            '061049': 'Ottaviano',
+            '061050': 'Palma Campania',
+            '061051': 'Piano di Sorrento',
+            '061052': 'Pimonte',
+            '061053': 'Poggiomarino',
+            '061054': 'Pollena Trocchia',
+            '061055': 'Pomigliano d\'Arco',
+            '061056': 'Pompei',
+            '061057': 'Portici',
+            '061058': 'Pozzuoli',
+            '061059': 'Procida',
+            '061060': 'Qualiano',
+            '061061': 'Quarto',
+            '061062': 'Roccarainola',
+            '061063': 'San Gennaro Vesuviano',
+            '061064': 'San Giorgio a Cremano',
+            '061065': 'San Giuseppe Vesuviano',
+            '061066': 'San Paolo Bel Sito',
+            '061067': 'San Sebastiano al Vesuvio',
+            '061068': 'San Vitaliano',
+            '061069': 'Sant\'Agnello',
+            '061070': 'Sant\'Anastasia',
+            '061071': 'Sant\'Antimo',
+            '061072': 'Sant\'Antonio Abate',
+            '061073': 'Saviano',
+            '061074': 'Scisciano',
+            '061075': 'Serrara Fontana',
+            '061076': 'Somma Vesuviana',
+            '061077': 'Sorrento',
+            '061078': 'Striano',
+            '061079': 'Terzigno',
+            '061080': 'Torre Annunziata',
+            '061081': 'Torre del Greco',
+            '061082': 'Trecase',
+            '061083': 'Tufino',
+            '061084': 'Vico Equense',
+            '061085': 'Villa di Briano',
+            '061086': 'Villaricca',
+            '061087': 'Visciano',
+            '061088': 'Volla',
+            '061089': 'Villaricca',
+            
+            // Provincia di Salerno (065xxx)
+            '065001': 'Salerno',
+            '065002': 'Acerno',
+            '065003': 'Agropoli',
+            '065004': 'Albanella',
+            '065005': 'Alfano',
+            '065006': 'Altavilla Silentina',
+            '065007': 'Amalfi',
+            '065008': 'Angri',
+            '065009': 'Aquara',
+            '065010': 'Ascea',
+            '065011': 'Atena Lucana',
+            '065012': 'Atrani',
+            '065013': 'Auletta',
+            '065014': 'Baronissi',
+            '065015': 'Battipaglia',
+            '065016': 'Bellosguardo',
+            '065017': 'Bracigliano',
+            '065018': 'Buccino',
+            '065019': 'Buonabitacolo',
+            '065020': 'Caggiano',
+            '065021': 'Calvanico',
+            '065022': 'Camerota',
+            '065023': 'Campagna',
+            '065024': 'Campora',
+            '065025': 'Cannalonga',
+            '065026': 'Capaccio Paestum',
+            '065027': 'Casal Velino',
+            '065028': 'Casalbuono',
+            '065029': 'Caselle in Pittari',
+            '065030': 'Castellabate',
+            '065031': 'Castelnuovo Cilento',
+            '065032': 'Castelnuovo di Conza',
+            '065033': 'Castelcivita',
+            '065034': 'Castiglione del Genovesi',
+            '065035': 'Cava de\' Tirreni',
+            '065036': 'Celle di Bulgheria',
+            '065037': 'Centola',
+            '065038': 'Ceraso',
+            '065039': 'Cetara',
+            '065040': 'Cicerale',
+            '065041': 'Colliano',
+            '065042': 'Conca dei Marini',
+            '065043': 'Controne',
+            '065044': 'Contursi Terme',
+            '065045': 'Corbara',
+            '065046': 'Corleto Monforte',
+            '065047': 'Cuccaro Vetere',
+            '065048': 'Eboli',
+            '065049': 'Felitto',
+            '065050': 'Fisciano',
+            '065051': 'Furore',
+            '065052': 'Futani',
+            '065053': 'Giffoni Sei Casali',
+            '065054': 'Giffoni Valle Piana',
+            '065055': 'Gioi',
+            '065056': 'Giungano',
+            '065057': 'Ispani',
+            '065058': 'Laureana Cilento',
+            '065059': 'Laurino',
+            '065060': 'Laurito',
+            '065061': 'Laviano',
+            '065062': 'Lustra',
+            '065063': 'Maiori',
+            '065064': 'Mercato San Severino',
+            '065065': 'Minori',
+            '065066': 'Moio della Civitella',
+            '065067': 'Monte San Giacomo',
+            '065068': 'Montecorice',
+            '065069': 'Monteforte Cilento',
+            '065070': 'Montesano sulla Marcellana',
+            '065071': 'Morigerati',
+            '065072': 'Nocera Inferiore',
+            '065073': 'Nocera Superiore',
+            '065074': 'Novi Velia',
+            '065075': 'Ogliastro Cilento',
+            '065076': 'Olevano sul Tusciano',
+            '065077': 'Omignano',
+            '065078': 'Orria',
+            '065079': 'Ottati',
+            '065080': 'Padula',
+            '065081': 'Pagani',
+            '065082': 'Palazzo San Gervasio',
+            '065083': 'Palomonte',
+            '065084': 'Perdifumo',
+            '065085': 'Perito',
+            '065086': 'Pertosa',
+            '065087': 'Petina',
+            '065088': 'Piaggine',
+            '065089': 'Pisciotta',
+            '065090': 'Polla',
+            '065091': 'Pollica',
+            '065092': 'Pontecagnano Faiano',
+            '065093': 'Positano',
+            '065094': 'Praiano',
+            '065095': 'Prignano Cilento',
+            '065096': 'Ravello',
+            '065097': 'Roccadaspide',
+            '065098': 'Roccagloriosa',
+            '065099': 'Roccapiemonte',
+            '065100': 'Rofrano',
+            '065101': 'Roscigno',
+            '065102': 'Rutino',
+            '065103': 'Sacco',
+            '065104': 'Sala Consilina',
+            '065105': 'Salento',
+            '065106': 'San Cipriano Picentino',
+            '065107': 'San Giovanni a Piro',
+            '065108': 'San Gregorio Magno',
+            '065109': 'San Lorenzo',
+            '065110': 'San Mango Piemonte',
+            '065111': 'San Marzano sul Sarno',
+            '065112': 'San Mauro Cilento',
+            '065113': 'San Mauro la Bruca',
+            '065114': 'San Pietro al Tanagro',
+            '065115': 'San Rufo',
+            '065116': 'San Valentino Torio',
+            '065117': 'Sant\'Angelo a Fasanella',
+            '065118': 'Sant\'Arsenio',
+            '065119': 'Sant\'Egidio del Monte Albino',
+            '065120': 'Santa Marina',
+            '065121': 'Santomenna',
+            '065122': 'Sapri',
+            '065123': 'Sarno',
+            '065124': 'Sassano',
+            '065125': 'Scafati',
+            '065126': 'Scala',
+            '065127': 'Scanno',
+            '065128': 'Serramezzana',
+            '065129': 'Sessa Cilento',
+            '065130': 'Siano',
+            '065131': 'Sicignano degli Alburni',
+            '065132': 'Stella Cilento',
+            '065133': 'Stio',
+            '065134': 'Teggiano',
+            '065135': 'Torraca',
+            '065136': 'Torchiara',
+            '065137': 'Torre Orsaia',
+            '065138': 'Tortorella',
+            '065139': 'Tramonti',
+            '065140': 'Trentinara',
+            '065141': 'Valle dell\'Angelo',
+            '065142': 'Vallo della Lucania',
+            '065143': 'Valva',
+            '065144': 'Vibonati',
+            '065145': 'Vietri sul Mare',
+            '065146': 'Laurino',
+            
+            // Provincia di Avellino (064xxx)
+            '064001': 'Avellino',
+            '064002': 'Aiello del Sabato',
+            '064003': 'Altavilla Irpina',
+            '064004': 'Andretta',
+            '064005': 'Aquilonia',
+            '064006': 'Ariano Irpino',
+            '064007': 'Atripalda',
+            '064008': 'Bagnoli Irpino',
+            '064009': 'Baiano',
+            '064010': 'Bisaccia',
+            '064011': 'Bonito',
+            '064012': 'Borgo San Lorenzo',
+            '064013': 'Cairano',
+            '064014': 'Calitri',
+            '064015': 'Candida',
+            '064016': 'Caposele',
+            '064017': 'Capriglia Irpina',
+            '064018': 'Carife',
+            '064019': 'Casalbore',
+            '064020': 'Cassano Irpino',
+            '064021': 'Castel Baronia',
+            '064022': 'Castelfranci',
+            '064023': 'Castelvetere in Val Fortore',
+            '064024': 'Cervinara',
+            '064025': 'Cesinali',
+            '064026': 'Chianche',
+            '064027': 'Chiusano di San Domenico',
+            '064028': 'Contrada',
+            '064029': 'Conza della Campania',
+            '064030': 'Domicella',
+            '064031': 'Ferrazzano',
+            '064032': 'Flumeri',
+            '064033': 'Fontanarosa',
+            '064034': 'Forino',
+            '064035': 'Frigento',
+            '064036': 'Gesualdo',
+            '064037': 'Greci',
+            '064038': 'Grottaminarda',
+            '064039': 'Grottolella',
+            '064040': 'Guardia Lombardi',
+            '064041': 'Lacedonia',
+            '064042': 'Lapio',
+            '064043': 'Lauro',
+            '064044': 'Lioni',
+            '064045': 'Luogosano',
+            '064046': 'Manocalzati',
+            '064047': 'Marzano di Nola',
+            '064048': 'Melito Irpino',
+            '064049': 'Mercogliano',
+            '064050': 'Mirabella Eclano',
+            '064051': 'Montaguto',
+            '064052': 'Montecalvo Irpino',
+            '064053': 'Montefalcione',
+            '064054': 'Monteforte Irpino',
+            '064055': 'Montefredane',
+            '064056': 'Montefusco',
+            '064057': 'Montella',
+            '064058': 'Montemarano',
+            '064059': 'Montemiletto',
+            '064060': 'Monteverde',
+            '064061': 'Morra De Sanctis',
+            '064062': 'Moschiano',
+            '064063': 'Mugnano del Cardinale',
+            '064064': 'Nusco',
+            '064065': 'Ospedaletto d\'Alpinolo',
+            '064066': 'Parolise',
+            '064067': 'Paternopoli',
+            '064068': 'Petruro Irpino',
+            '064069': 'Pietradefusi',
+            '064070': 'Pietrastornina',
+            '064071': 'Prata di Principato Ultra',
+            '064072': 'Pratola Serra',
+            '064073': 'Quadrelle',
+            '064074': 'Quindici',
+            '064075': 'Roccabascerana',
+            '064076': 'Rocca San Felice',
+            '064077': 'Rotondi',
+            '064078': 'Salza Irpina',
+            '064079': 'San Mango sul Calore',
+            '064080': 'San Martino Valle Caudina',
+            '064081': 'San Michele di Serino',
+            '064082': 'San Nicola Baronia',
+            '064083': 'San Potito Ultra',
+            '064084': 'San Sossio Baronia',
+            '064085': 'Santa Lucia di Serino',
+            '064086': 'Santa Paolina',
+            '064087': 'Sant\'Andrea di Conza',
+            '064088': 'Sant\'Angelo all\'Esca',
+            '064089': 'Sant\'Angelo dei Lombardi',
+            '064090': 'Sant\'Angelo a Scala',
+            '064091': 'Santo Stefano del Sole',
+            '064092': 'Scampitella',
+            '064093': 'Senerchia',
+            '064094': 'Serino',
+            '064095': 'Sirignano',
+            '064096': 'Solofra',
+            '064097': 'Sorbo Serpico',
+            '064098': 'Sperone',
+            '064099': 'Sturno',
+            '064100': 'Summonte',
+            '064101': 'Taurano',
+            '064102': 'Taurasi',
+            '064103': 'Teora',
+            '064104': 'Torella dei Lombardi',
+            '064105': 'Torre Le Nocelle',
+            '064106': 'Torrioni',
+            '064107': 'Trevico',
+            '064108': 'Tufo',
+            '064109': 'Vallata',
+            '064110': 'Vallesaccarda',
+            '064111': 'Venticano',
+            '064112': 'Villamaina',
+            '064113': 'Villanova del Battista',
+            '064114': 'Volturara Irpina',
+            '064115': 'Zungoli',
+            
+            // Provincia di Benevento (062xxx)
+            '062001': 'Benevento',
+            '062002': 'Airola',
+            '062003': 'Amorosi',
+            '062004': 'Apice',
+            '062005': 'Apollosa',
+            '062006': 'Arpaia',
+            '062007': 'Arpaise',
+            '062008': 'Baselice',
+            '062009': 'Bonea',
+            '062010': 'Bucciano',
+            '062011': 'Buonalbergo',
+            '062012': 'Buzzi',
+            '062013': 'Calvi',
+            '062014': 'Campolattaro',
+            '062015': 'Campoli del Monte Taburno',
+            '062016': 'Casalduni',
+            '062017': 'Castelfranco in Miscano',
+            '062018': 'Castelpagano',
+            '062019': 'Castelpoto',
+            '062020': 'Castelvenere',
+            '062021': 'Castelvetere in Val Fortore',
+            '062022': 'Cautano',
+            '062023': 'Ceppaloni',
+            '062024': 'Cercemaggiore',
+            '062025': 'Cerreto Sannita',
+            '062026': 'Circello',
+            '062027': 'Colle Sannita',
+            '062028': 'Cusano Mutri',
+            '062029': 'Dugenta',
+            '062030': 'Durazzano',
+            '062031': 'Faeto',
+            '062032': 'Faicchio',
+            '062033': 'Foglianise',
+            '062034': 'Foiano di Val Fortore',
+            '062035': 'Forchia',
+            '062036': 'Fragneto l\'Abate',
+            '062037': 'Fragneto Monforte',
+            '062038': 'Frasso Telesino',
+            '062039': 'Ginestra degli Schiavoni',
+            '062040': 'Gioia Sannitica',
+            '062041': 'Guardia Sanframondi',
+            '062042': 'Limatola',
+            '062043': 'Maddaloni',
+            '062044': 'Melizzano',
+            '062045': 'Moiano',
+            '062046': 'Molinara',
+            '062047': 'Montefalcone di Val Fortore',
+            '062048': 'Montesarchio',
+            '062049': 'Morcone',
+            '062050': 'Paduli',
+            '062051': 'Pago Veiano',
+            '062052': 'Pannarano',
+            '062053': 'Paolisi',
+            '062054': 'Paupisi',
+            '062055': 'Pietraroja',
+            '062056': 'Pietrelcina',
+            '062057': 'Ponte',
+            '062058': 'Pontelandolfo',
+            '062059': 'Puglianello',
+            '062060': 'Reino',
+            '062061': 'San Bartolomeo in Galdo',
+            '062062': 'San Giorgio del Sannio',
+            '062063': 'San Giorgio La Molara',
+            '062064': 'San Leucio del Sannio',
+            '062065': 'San Lorenzo Maggiore',
+            '062066': 'San Lupo',
+            '062067': 'San Marco dei Cavoti',
+            '062068': 'San Martino Sannita',
+            '062069': 'San Nazzaro',
+            '062070': 'San Nicola Manfredi',
+            '062071': 'San Salvatore Telesino',
+            '062072': 'Santa Croce del Sannio',
+            '062073': 'Sant\'Agata de\' Goti',
+            '062074': 'Sant\'Angelo a Cupolo',
+            '062075': 'Sant\'Arcangelo Trimonte',
+            '062076': 'Sassinoro',
+            '062077': 'Solopaca',
+            '062078': 'Telese Terme',
+            '062079': 'Tocco Caudio',
+            '062080': 'Torrecuso',
+            '062081': 'Vitulano',
+            
+            // Provincia di Caserta (061xxx) - completamento
+            '061032': 'Caserta',
+            '061090': 'Alvignano',
+            '061091': 'Arienzo',
+            '061092': 'Aversa',
+            '061093': 'Baia e Latina',
+            '061094': 'Bellona',
+            '061095': 'Caianello',
+            '061096': 'Caiazzo',
+            '061097': 'Calvi Risorta',
+            '061098': 'Camigliano',
+            '061099': 'Cancello ed Arnone',
+            '061100': 'Capodrise',
+            '061101': 'Capriati a Volturno',
+            '061102': 'Capua',
+            '061103': 'Carinaro',
+            '061104': 'Carinola',
+            '061105': 'Casagiove',
+            '061106': 'Casal di Principe',
+            '061107': 'Casaluce',
+            '061108': 'Casapesenna',
+            '061109': 'Casapulla',
+            '061110': 'Castel Campagnano',
+            '061111': 'Castel di Sasso',
+            '061112': 'Castel Morrone',
+            '061113': 'Castel Volturno',
+            '061114': 'Castello del Matese',
+            '061115': 'Cervino',
+            '061116': 'Cesa',
+            '061117': 'Cisterna di Latina',
+            '061118': 'Conca della Campania',
+            '061119': 'Curti',
+            '061120': 'Dragoni',
+            '061121': 'Duecamere',
+            '061122': 'Falciano del Massico',
+            '061123': 'Fontegreca',
+            '061124': 'Formicola',
+            '061125': 'Francolise',
+            '061126': 'Frignano',
+            '061127': 'Gallo Matese',
+            '061128': 'Galluccio',
+            '061129': 'Giano Vetusto',
+            '061130': 'Gricignano di Aversa',
+            '061131': 'Grazzanise',
+            '061132': 'Letino',
+            '061133': 'Liberi',
+            '061134': 'Lusciano',
+            '061135': 'Macerata Campania',
+            '061136': 'Maddaloni',
+            '061137': 'Marcianise',
+            '061138': 'Marzano Appio',
+            '061139': 'Mignano Monte Lungo',
+            '061140': 'Mondragone',
+            '061141': 'Monte di Procida',
+            '061142': 'Orta di Atella',
+            '061143': 'Parete',
+            '061144': 'Pastorano',
+            '061145': 'Piedimonte Matese',
+            '061146': 'Pietramelara',
+            '061147': 'Pietravairano',
+            '061148': 'Pignataro Maggiore',
+            '061149': 'Pontelatone',
+            '061150': 'Portico di Caserta',
+            '061151': 'Prata Sannita',
+            '061152': 'Presenzano',
+            '061153': 'Raviscanina',
+            '061154': 'Recale',
+            '061155': 'Riardo',
+            '061156': 'Rocca d\'Evandro',
+            '061157': 'Roccamonfina',
+            '061158': 'Roccaromana',
+            '061159': 'Rocchetta e Croce',
+            '061160': 'Ruviano',
+            '061161': 'San Cipriano d\'Aversa',
+            '061162': 'San Felice a Cancello',
+            '061163': 'San Gregorio Matese',
+            '061164': 'San Marcellino',
+            '061165': 'San Nicola la Strada',
+            '061166': 'San Pietro Infine',
+            '061167': 'San Potito Sannitico',
+            '061168': 'San Prisco',
+            '061169': 'San Tammaro',
+            '061170': 'Santa Maria a Vico',
+            '061171': 'Santa Maria Capua Vetere',
+            '061172': 'Santa Maria la Fossa',
+            '061173': 'Sant\'Andrea del Pizzone',
+            '061174': 'Sant\'Angelo d\'Alife',
+            '061175': 'Santo Arpino',
+            '061176': 'Sessa Aurunca',
+            '061177': 'Sparanise',
+            '061178': 'Succivo',
+            '061179': 'Teano',
+            '061180': 'Teverola',
+            '061181': 'Tora e Piccilli',
+            '061182': 'Trecastagni',
+            '061183': 'Trentola-Ducenta',
+            '061184': 'Vairano Patenora',
+            '061185': 'Valle Agricola',
+            '061186': 'Valle di Maddaloni',
+            '061187': 'Villa di Briano',
+            '061188': 'Villa Literno',
+            '061189': 'Vitulazio',
+            
+            // Altri codici comuni della Campania
+            '063001': 'Acerra',
+            '063002': 'Agropoli',
+            '063003': 'Amalfi',
+            '063004': 'Angri',
+            '063005': 'Arzano',
+            '063006': 'Atripalda',
+            '063007': 'Aversa',
+            '063008': 'Avellino',
+            '063009': 'Bacoli',
+            '063010': 'Baronissi',
+            '063011': 'Battipaglia',
+            '063012': 'Benevento',
+            '063013': 'Boscoreale',
+            '063014': 'Boscotrecase',
+            '063015': 'Brusciano',
+            '063016': 'Capaccio Paestum',
+            '063017': 'Capri',
+            '063018': 'Capua',
+            '063019': 'Carinaro',
+            '063020': 'Casalnuovo di Napoli',
+            '063021': 'Casamicciola Terme',
+            '063022': 'Casavatore',
+            '063023': 'Caserta',
+            '063024': 'Castellammare di Stabia',
+            '063025': 'Cava de\' Tirreni',
+            '063026': 'Cercola',
+            '063027': 'Cetara',
+            '063028': 'Cicciano',
+            '063029': 'Cimitile',
+            '063030': 'Eboli',
+            '063031': 'Ercolano',
+            '063032': 'Fisciano',
+            '063033': 'Forio',
+            '063034': 'Frattamaggiore',
+            '063035': 'Frattaminore',
+            '063036': 'Furore',
+            '063037': 'Giffoni Valle Piana',
+            '063038': 'Giugliano in Campania',
+            '063039': 'Gragnano',
+            '063040': 'Grumo Nevano',
+            '063041': 'Ischia',
+            '063042': 'Lacco Ameno',
+            '063043': 'Lettere',
+            '063044': 'Maddaloni',
+            '063045': 'Maiori',
+            '063046': 'Marano di Napoli',
+            '063047': 'Marcianise',
+            '063048': 'Marigliano',
+            '063049': 'Salerno',
+            '063050': 'Melito di Napoli',
+            '063051': 'Mercato San Severino',
+            '063052': 'Mercogliano',
+            '063053': 'Meta',
+            '063054': 'Minori',
+            '063055': 'Mondragone',
+            '063056': 'Monte di Procida',
+            '063057': 'Montesarchio',
+            '063058': 'Mugnano di Napoli',
+            '063059': 'Nocera Inferiore',
+            '063060': 'Nocera Superiore',
+            '063061': 'Nola',
+            '063062': 'Olevano sul Tusciano',
+            '063063': 'Ottaviano',
+            '063064': 'Pagani',
+            '063065': 'Palma Campania',
+            '063066': 'Piano di Sorrento',
+            '063067': 'Pimonte',
+            '063068': 'Poggiomarino',
+            '063069': 'Pollena Trocchia',
+            '063070': 'Pomigliano d\'Arco',
+            '063071': 'Pompei',
+            '063072': 'Pontecagnano Faiano',
+            '063073': 'Portici',
+            '063074': 'Positano',
+            '063075': 'Pozzuoli',
+            '063076': 'Praiano',
+            '063077': 'Procida',
+            '063078': 'Qualiano',
+            '063079': 'Quarto',
+            '063080': 'Ravello',
+            '063081': 'Roccapiemonte',
+            '063082': 'San Cipriano Picentino',
+            '063083': 'San Giorgio a Cremano',
+            '063084': 'San Giuseppe Vesuviano',
+            '063085': 'San Marzano sul Sarno',
+            '063086': 'San Sebastiano al Vesuvio',
+            '063087': 'San Valentino Torio',
+            '063088': 'Sant\'Agnello',
+            '063089': 'Sant\'Anastasia',
+            '063090': 'Sant\'Antimo',
+            '063091': 'Sant\'Antonio Abate',
+            '063092': 'Santa Maria Capua Vetere',
+            '063093': 'Santo Stefano del Sole',
+            '063094': 'Sapri',
+            '063095': 'Sarno',
+            '063096': 'Saviano',
+            '063097': 'Scafati',
+            '063098': 'Scala',
+            '063099': 'Scisciano',
+            '063100': 'Serrara Fontana',
+            '063101': 'Siano',
+            '063102': 'Solofra',
+            '063103': 'Somma Vesuviana',
+            '063104': 'Sorrento',
+            '063105': 'Striano',
+            '063106': 'Telese Terme',
+            '063107': 'Terzigno',
+            '063108': 'Torre Annunziata',
+            '063109': 'Torre del Greco',
+            '063110': 'Tramonti',
+            '063111': 'Trecase',
+            '063112': 'Tufino',
+            '063113': 'Vairano Patenora',
+            '063114': 'Vico Equense',
+            '063115': 'Vietri sul Mare',
+            '063116': 'Villa di Briano',
+            '063117': 'Villaricca',
+            '063118': 'Visciano',
+            '063119': 'Volla',
+            
+            // Codici generici di fallback
+            '999999': 'Comune non identificato',
+            '000000': 'Dati mancanti'
+        };
+        
+        async function loadData() {
+            try {
+                console.log('🔄 Starting loadData...');
+                const response = await fetch('/api/real-database/three-diseases-stats');
+                console.log('📡 Fetch response:', response.status, response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                diseaseData = await response.json();
+                console.log('📊 Data loaded:', diseaseData ? 'SUCCESS' : 'FAILED');
+                console.log('📋 Status:', diseaseData?.status);
+
+                if (diseaseData.status === 'success') {
+                    // Store original data for filtering
+                    originalDiseaseData = JSON.parse(JSON.stringify(diseaseData));
+                    
+                    updateDebugStatus('✅ API response successful');
+                    normalizeDiseases();
+                    updateDebugStatus('🔄 Data normalization complete');
+                    
+                    // Apply current filter if any
+                    if (currentFilter.startDate && currentFilter.endDate) {
+                        filterDataByTime();
+                    }
+                    
+                    console.log('🎨 Rendering overview...');
+                    updateDebugStatus('🎨 Rendering overview...');
+                    renderOverview();
+                    
+                    console.log('📈 Rendering charts...');
+                    updateDebugStatus('📈 Starting chart rendering...');
+                    renderCharts();
+                    
+                    console.log('🗺️ Rendering map...');
+                    updateDebugStatus('🗺️ Rendering map...');
+                    renderMap();
+                    
+                    console.log('📋 Rendering tables...');
+                    updateDebugStatus('📋 Rendering tables...');
+                    renderTables();
+                    
+                    console.log('✅ Showing content...');
+                    updateDebugStatus('✅ All components rendered successfully!');
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('content').style.display = 'block';
+                    if (map && typeof map.invalidateSize === 'function') {
+                        map.invalidateSize();
+                    }
+                    console.log('🎉 Load complete!');
+                } else {
+                    throw new Error('Errore nel caricamento dei dati');
+                }
+            } catch (error) {
+                console.error('❌ Errore in loadData:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = `Errore nel caricamento dei dati: ${error.message}`;
+            }
+        }
+
+        function normalizeDiseases() {
+            const expected = {
+                influenza: { name: 'Influenza' },
+                legionellosi: { name: 'Legionellosi' },
+                hepatitis_a: { name: 'Epatite A' }
+            };
+
+            if (!diseaseData.diseases) diseaseData.diseases = {};
+
+            Object.keys(expected).forEach(key => {
+                if (!diseaseData.diseases[key]) {
+                    diseaseData.diseases[key] = {
+                        name: expected[key].name,
+                        total_cases: 0,
+                        cases: [],
+                        geographic_distribution: [],
+                        monthly_trends: [],
+                        predictions: [],
+                        arima_model_info: {}
+                    };
+                } else {
+                    // Ensure required arrays exist
+                    diseaseData.diseases[key].geographic_distribution ||= [];
+                    diseaseData.diseases[key].monthly_trends ||= [];
+                    diseaseData.diseases[key].predictions ||= [];
+                }
+            });
+        }
+        
+        function renderOverview() {
+            const overview = document.getElementById('statsOverview');
+            const diseases = diseaseData.diseases;
+            
+            overview.innerHTML = Object.keys(diseases).map(key => {
+                const disease = diseases[key];
+                const totalRegions = disease.geographic_distribution.length;
+                const latestCases = disease.monthly_trends.slice(-1)[0]?.cases || 0;
+                
+                // Calculate ARIMA prediction trends with confidence intervals
+                const predictions = disease.predictions || [];
+                const nextMonthPrediction = predictions.length > 0 ? predictions[0].predicted_cases : 0;
+                const confidenceLevel = predictions.length > 0 ? Math.round((predictions[0].confidence_level || 0.95) * 100) : 95;
+                const predictionMethod = predictions.length > 0 ? predictions[0].prediction_method || 'ARIMA' : 'N/A';
+                const predictionTrend = nextMonthPrediction > latestCases ? '📈' : nextMonthPrediction < latestCases ? '📉' : '➡️';
+                
+                // Get ARIMA model information
+                const arimaInfo = disease.arima_model_info || {};
+                const modelType = arimaInfo.model_type || 'ARIMA';
+                const hasSeasonality = arimaInfo.seasonality?.has_seasonality ? '🔄' : '';
+                const modelAccuracy = arimaInfo.aic ? `AIC: ${Math.round(arimaInfo.aic)}` : '';
+                
+                return `
+                    <div class="disease-card ${key}">
+                        <div class="disease-title">
+                            ${disease.name} 
+                            <span style="font-size: 0.7em; color: #7f8c8d;">
+                                ${hasSeasonality} ${modelType} ${modelAccuracy}
+                            </span>
+                        </div>
+                        <div class="disease-stats">
+                            <div class="stat-item">
+                                <div class="stat-number">${disease.total_cases}</div>
+                                <div class="stat-label">Casi Totali</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${totalRegions}</div>
+                                <div class="stat-label">Comuni Coinvolti</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${latestCases}</div>
+                                <div class="stat-label">Casi Ultimo Mese</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-number">${predictionTrend} ${nextMonthPrediction}</div>
+                                <div class="stat-label">🔮 Previsione ARIMA (${confidenceLevel}%)</div>
+                            </div>
+                        </div>
+                        ${predictions.length > 0 ? `
+                            <div style="margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px; font-size: 0.8em; color: #666;">
+                                📊 Metodo: ${predictionMethod} | 
+                                Intervallo: ${predictions[0].lower_bound || 'N/A'}-${predictions[0].upper_bound || 'N/A'} casi |
+                                ${hasSeasonality ? 'Con stagionalità' : 'Senza stagionalità'}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Time filtering functions
+        function initializeTimeFilter() {
+            // Set default dates (last year)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setFullYear(startDate.getFullYear() - 1);
+            
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            document.getElementById('quickPeriod').value = 'last12months';
+            
+            // Add event listeners
+            document.getElementById('applyFilter').addEventListener('click', applyTimeFilter);
+            document.getElementById('quickPeriod').addEventListener('change', handleQuickPeriod);
+            
+            updateFilterStatus();
+        }
+        
+        function handleQuickPeriod() {
+            const period = document.getElementById('quickPeriod').value;
+            const endDate = new Date();
+            let startDate = new Date();
+            
+            switch(period) {
+                case 'last7days':
+                    startDate.setDate(endDate.getDate() - 7);
+                    break;
+                case 'last30days':
+                    startDate.setDate(endDate.getDate() - 30);
+                    break;
+                case 'last3months':
+                    startDate.setMonth(endDate.getMonth() - 3);
+                    break;
+                case 'last6months':
+                    startDate.setMonth(endDate.getMonth() - 6);
+                    break;
+                case 'last12months':
+                    startDate.setFullYear(endDate.getFullYear() - 1);
+                    break;
+                case 'last24months':
+                    startDate.setFullYear(endDate.getFullYear() - 2);
+                    break;
+                case 'all':
+                    // Set to very early date to include all data
+                    startDate = new Date('2020-01-01');
+                    break;
+                default:
+                    return;
+            }
+            
+            if (period !== 'all') {
+                document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+                document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            } else {
+                document.getElementById('startDate').value = '2020-01-01';
+                document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            }
+        }
+        
+        function applyTimeFilter() {
+            const startDateStr = document.getElementById('startDate').value;
+            const endDateStr = document.getElementById('endDate').value;
+            const period = document.getElementById('quickPeriod').value;
+            
+            if (!startDateStr || !endDateStr) {
+                alert('Per favore seleziona sia la data di inizio che quella di fine.');
+                return;
+            }
+            
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(endDateStr);
+            
+            if (startDate >= endDate) {
+                alert('La data di inizio deve essere anteriore alla data di fine.');
+                return;
+            }
+            
+            currentFilter = {
+                startDate: startDate,
+                endDate: endDate,
+                period: period
+            };
+            
+            // Apply filter to data and re-render
+            filterDataByTime();
+            updateFilterStatus();
+            renderCharts();
+            renderMap();
+            renderTables();
+        }
+        
+        function filterDataByTime() {
+            if (!originalDiseaseData) {
+                originalDiseaseData = JSON.parse(JSON.stringify(diseaseData)); // Deep clone
+            }
+            
+            // Reset to original data
+            diseaseData = JSON.parse(JSON.stringify(originalDiseaseData));
+            
+            if (!currentFilter.startDate || !currentFilter.endDate) {
+                return; // No filter applied
+            }
+            
+            // Filter cases by date
+            Object.keys(diseaseData.diseases).forEach(disease => {
+                const cases = diseaseData.diseases[disease].cases || [];
+                diseaseData.diseases[disease].cases = cases.filter(caseData => {
+                    const caseDate = new Date(caseData.data_inserimento || caseData.date);
+                    return caseDate >= currentFilter.startDate && caseDate <= currentFilter.endDate;
+                });
+                
+                // Recalculate total
+                diseaseData.diseases[disease].total = diseaseData.diseases[disease].cases.length;
+                
+                // Filter monthly trends
+                if (diseaseData.diseases[disease].monthly_trends) {
+                    diseaseData.diseases[disease].monthly_trends = diseaseData.diseases[disease].monthly_trends.filter(trend => {
+                        const trendDate = new Date(trend.month + '-01');
+                        return trendDate >= currentFilter.startDate && trendDate <= currentFilter.endDate;
+                    });
+                }
+                
+                // Filter predictions (keep all for now, but could be filtered)
+                // Predictions are future-looking so we might want to keep them
+            });
+            
+            // Recalculate total cases
+            diseaseData.total_cases = Object.values(diseaseData.diseases).reduce((sum, disease) => sum + disease.total, 0);
+            
+            // Recalculate regions
+            const regionCounts = {};
+            Object.values(diseaseData.diseases).forEach(disease => {
+                disease.cases.forEach(caseData => {
+                    const region = caseData.regione || 'Sconosciuta';
+                    regionCounts[region] = (regionCounts[region] || 0) + 1;
+                });
+            });
+            
+            diseaseData.regions = Object.entries(regionCounts)
+                .map(([name, cases]) => ({ name, cases }))
+                .sort((a, b) => b.cases - a.cases);
+        }
+        
+        function updateFilterStatus() {
+            const statusText = document.getElementById('filterStatusText');
+            if (currentFilter.period === 'all') {
+                statusText.textContent = 'Tutti i dati disponibili';
+            } else if (currentFilter.startDate && currentFilter.endDate) {
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                const start = currentFilter.startDate.toLocaleDateString('it-IT', options);
+                const end = currentFilter.endDate.toLocaleDateString('it-IT', options);
+                statusText.textContent = `Dal ${start} al ${end}`;
+            }
+        }
+        
+        function updateDebugStatus(message) {
+            // Debug function disabled for production
+            // Uncomment the code below for troubleshooting
+            /*
+            const debugLog = document.getElementById('debugLog');
+            if (debugLog) {
+                const timestamp = new Date().toLocaleTimeString();
+                debugLog.innerHTML += `<br/>[${timestamp}] ${message}`;
+                debugLog.scrollTop = debugLog.scrollHeight;
+            }
+            */
+        }
+
+        function renderCharts() {
+            updateDebugStatus('🔍 Starting chart rendering process...');
+            updateDebugStatus(`� Disease data: ${diseaseData ? 'Available' : 'Missing'}`);
+            if (diseaseData) {
+                updateDebugStatus(`📋 Diseases found: ${Object.keys(diseaseData.diseases || {}).join(', ')}`);
+            }
+            
+            try {
+                updateDebugStatus('📈 Rendering disease distribution chart...');
+                renderDiseaseDistribution();
+                updateDebugStatus('✅ Disease distribution chart: SUCCESS');
+            } catch (e) { 
+                console.error('❌ renderDiseaseDistribution failed:', e);
+                updateDebugStatus(`❌ Disease distribution chart: FAILED - ${e.message}`);
+                addErrorToCanvas('diseaseDistributionChart', 'Errore nel caricamento del grafico di distribuzione');
+            }
+            
+            try {
+                updateDebugStatus('📈 Rendering monthly trends chart...');
+                renderMonthlyTrends();
+                updateDebugStatus('✅ Monthly trends chart: SUCCESS');
+            } catch (e) { 
+                console.error('❌ renderMonthlyTrends failed:', e);
+                updateDebugStatus(`❌ Monthly trends chart: FAILED - ${e.message}`);
+                addErrorToCanvas('monthlyTrendsChart', 'Errore nel caricamento del grafico mensile');
+            }
+            
+            try {
+                updateDebugStatus('📈 Rendering regional comparison chart...');
+                renderRegionalComparison();
+                updateDebugStatus('✅ Regional comparison chart: SUCCESS');
+            } catch (e) { 
+                console.error('❌ renderRegionalComparison failed:', e);
+                updateDebugStatus(`❌ Regional comparison chart: FAILED - ${e.message}`);
+                addErrorToCanvas('regionalComparisonChart', 'Errore nel caricamento del confronto regionale');
+            }
+            
+            try {
+                updateDebugStatus('📈 Rendering predictions chart...');
+                renderPredictions();
+                updateDebugStatus('✅ Predictions chart: SUCCESS');
+            } catch (e) { 
+                console.error('❌ renderPredictions failed:', e);
+                updateDebugStatus(`❌ Predictions chart: FAILED - ${e.message}`);
+                addErrorToCanvas('predictionChart', 'Errore nel caricamento delle previsioni');
+            }
+            
+            try {
+                updateDebugStatus('📈 Rendering historical predictions chart...');
+                renderHistoricalPredictions();
+                updateDebugStatus('✅ Historical predictions chart: SUCCESS');
+            } catch (e) { 
+                console.error('❌ renderHistoricalPredictions failed:', e);
+                updateDebugStatus(`❌ Historical predictions chart: FAILED - ${e.message}`);
+                addErrorToCanvas('historicalPredictionChart', 'Errore nel caricamento dell\'analisi storica');
+            }
+            
+            updateDebugStatus('🎉 Chart rendering process complete!');
+        }
+        
+        function addErrorToCanvas(canvasId, message) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#dc3545';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+            }
+        }
+        
+        function renderPredictions() {
+            console.log('🔍 Validating data for predictions chart...');
+            
+            if (!diseaseData || !diseaseData.diseases) {
+                throw new Error('No disease data available for predictions');
+            }
+            
+            const diseases = diseaseData.diseases;
+            const diseaseKeys = Object.keys(diseases);
+            
+            if (diseaseKeys.length === 0) {
+                throw new Error('No diseases found for predictions');
+            }
+            
+            console.log('✅ Found diseases for predictions:', diseaseKeys);
+            
+            const ctx = document.getElementById('predictionChart').getContext('2d');
+            const datasets = [];
+            
+            // Find diseases with valid predictions
+            const diseasesWithPredictions = diseaseKeys.filter(key => {
+                const disease = diseases[key];
+                const predictions = disease.predictions || [];
+                const hasValidPredictions = Array.isArray(predictions) && 
+                    predictions.length > 0 && 
+                    predictions[0].month && 
+                    typeof predictions[0].predicted_cases === 'number';
+                
+                if (!hasValidPredictions) {
+                    console.warn(`⚠️ Invalid predictions for ${key}:`, predictions);
+                }
+                
+                return hasValidPredictions;
+            });
+            
+            if (diseasesWithPredictions.length === 0) {
+                throw new Error('No valid predictions data found');
+            }
+            
+            console.log('✅ Diseases with valid predictions:', diseasesWithPredictions);
+            
+            // Get prediction months from the first disease with predictions
+            const firstDiseaseKey = diseasesWithPredictions[0];
+            const predictionMonths = diseases[firstDiseaseKey].predictions.map(p => 
+                new Date(p.month).toLocaleDateString('it-IT', {year: 'numeric', month: 'short'})
+            );
+            
+            console.log('✅ Prediction months:', predictionMonths);
+            
+            // Add prediction lines with confidence intervals for each disease
+            diseasesWithPredictions.forEach(key => {
+                const disease = diseases[key];
+                const predictions = disease.predictions;
+                
+                console.log(`✅ Processing predictions for ${disease.name}:`, predictions.length, 'predictions');
+                
+                // Main prediction line
+                datasets.push({
+                    label: `${disease.name} - 🔮 ARIMA Previsioni`,
+                    data: predictions.map(p => p.predicted_cases),
+                    borderColor: diseaseColors[key],
+                    backgroundColor: diseaseColors[key] + '20',
+                    fill: false,
+                    tension: 0.4,
+                    borderDash: [5, 5],
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    borderWidth: 3
+                });
+                
+                // Confidence interval upper bound
+                if (predictions[0].upper_bound !== undefined) {
+                    datasets.push({
+                        label: `${disease.name} - Limite Superiore (95%)`,
+                        data: predictions.map(p => p.upper_bound || p.predicted_cases + 5),
+                        borderColor: diseaseColors[key] + '60',
+                        backgroundColor: 'transparent',
+                        fill: '+1', // Fill between this and previous dataset
+                        tension: 0.4,
+                        borderDash: [2, 2],
+                        pointRadius: 2,
+                        borderWidth: 1
+                    });
+                    
+                    // Confidence interval lower bound
+                    datasets.push({
+                        label: `${disease.name} - Limite Inferiore (95%)`,
+                        data: predictions.map(p => Math.max(0, p.lower_bound || p.predicted_cases - 5)),
+                        borderColor: diseaseColors[key] + '60',
+                        backgroundColor: diseaseColors[key] + '15',
+                        fill: '-1', // Fill between this and previous dataset
+                        tension: 0.4,
+                        borderDash: [2, 2],
+                        pointRadius: 2,
+                        borderWidth: 1
+                    });
+                }
+            });
+            
+            if (datasets.length === 0) {
+                throw new Error('No datasets created for predictions chart');
+            }
+            
+            console.log('✅ Created datasets:', datasets.length);
+            
+            charts.predictions = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: predictionMonths,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Casi Predetti (ARIMA)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Periodo Predittivo (6 Mesi)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const datasetLabel = context.dataset.label;
+                                    if (datasetLabel.includes('ARIMA Previsioni')) {
+                                        const diseaseKey = Object.keys(diseases)[Math.floor(context.datasetIndex / 3)];
+                                        const prediction = diseases[diseaseKey].predictions[context.dataIndex];
+                                        if (prediction) {
+                                            const confidence = ((prediction.confidence_level || 0.95) * 100).toFixed(1);
+                                            const method = prediction.prediction_method || 'ARIMA';
+                                            const seasonal = prediction.seasonal_factor ? ` | Stagionale: ${prediction.seasonal_factor.toFixed(2)}` : '';
+                                            return `Metodo: ${method} | Confidenza: ${confidence}%${seasonal}`;
+                                        }
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderHistoricalPredictions() {
+            console.log('🔍 Validating data for historical predictions chart...');
+            
+            if (!diseaseData || !diseaseData.diseases) {
+                throw new Error('No disease data available for historical predictions');
+            }
+            
+            const diseases = diseaseData.diseases;
+            const diseaseKeys = Object.keys(diseases);
+            
+            if (diseaseKeys.length === 0) {
+                throw new Error('No diseases found for historical predictions');
+            }
+            
+            console.log('✅ Found diseases for historical predictions:', diseaseKeys);
+            
+            const ctx = document.getElementById('historicalPredictionChart').getContext('2d');
+            const datasets = [];
+            
+            // Find diseases with valid monthly trends and predictions
+            const validDiseases = diseaseKeys.filter(key => {
+                const disease = diseases[key];
+                const hasValidTrends = Array.isArray(disease.monthly_trends) && disease.monthly_trends.length > 0;
+                const hasValidPredictions = Array.isArray(disease.predictions) && 
+                    disease.predictions.length > 0 && 
+                    disease.predictions[0].month;
+                
+                if (!hasValidTrends) {
+                    console.warn(`⚠️ No valid monthly trends for ${key}`);
+                }
+                if (!hasValidPredictions) {
+                    console.warn(`⚠️ No valid predictions for ${key}`);
+                }
+                
+                return hasValidTrends && hasValidPredictions;
+            });
+            
+            if (validDiseases.length === 0) {
+                throw new Error('No diseases with both historical trends and predictions found');
+            }
+            
+            console.log('✅ Valid diseases with both data types:', validDiseases);
+            
+            // Use the first valid disease to establish the timeline
+            const firstDiseaseKey = validDiseases[0];
+            const firstDisease = diseases[firstDiseaseKey];
+            
+            // Get historical labels
+            const historicalLabels = firstDisease.monthly_trends.map(trend => 
+                new Date(trend.month).toLocaleDateString('it-IT', {year: 'numeric', month: 'short'})
+            );
+            
+            // Get prediction labels  
+            const predictionLabels = firstDisease.predictions.map(p => 
+                new Date(p.month).toLocaleDateString('it-IT', {year: 'numeric', month: 'short'})
+            );
+            
+            // Combine all labels
+            const allLabels = [...historicalLabels, ...predictionLabels];
+            console.log('✅ Timeline labels:', allLabels.length, 'periods');
+            
+            // Create datasets for each valid disease
+            validDiseases.forEach(key => {
+                const disease = diseases[key];
+                
+                // Historical data
+                const historicalData = disease.monthly_trends.map(trend => trend.cases);
+                
+                datasets.push({
+                    label: `${disease.name} - Storico`,
+                    data: historicalData,
+                    borderColor: diseaseColors[key],
+                    backgroundColor: diseaseColors[key] + '30',
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 3
+                });
+                
+                // Predictions
+                const predictionData = disease.predictions.map(p => p.predicted_cases);
+                
+                datasets.push({
+                    label: `${disease.name} - Previsione`,
+                    data: Array(historicalData.length).fill(null).concat(predictionData),
+                    borderColor: diseaseColors[key],
+                    backgroundColor: diseaseColors[key] + '10',
+                    fill: '+1',
+                    tension: 0.4,
+                    borderDash: [10, 5],
+                    pointRadius: 4,
+                    pointBackgroundColor: diseaseColors[key],
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                });
+                
+                console.log(`✅ Added historical and prediction data for ${disease.name}`);
+            });
+            
+            if (datasets.length === 0) {
+                throw new Error('No datasets created for historical predictions chart');
+            }
+            
+            console.log('✅ Created datasets for historical chart:', datasets.length);
+            
+            charts.historicalPrediction = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Numero Casi'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Periodo (Storico → Predittivo)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(contexts) {
+                                    return contexts[0].label;
+                                },
+                                afterBody: function(contexts) {
+                                    const index = contexts[0].dataIndex;
+                                    const historicalLength = diseases.influenza.monthly_trends.length;
+                                    
+                                    if (index >= historicalLength) {
+                                        return ['', '🔮 PREVISIONE ALGORITMICA', 'Basata su analisi time series'];
+                                    } else {
+                                        return ['', '📊 DATO STORICO', 'Database GESAN malattie infettive'];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Add event listeners for checkboxes
+            document.getElementById('showConfidenceIntervals').addEventListener('change', function() {
+                updateHistoricalChart();
+            });
+            
+            document.getElementById('showSeasonalFactors').addEventListener('change', function() {
+                updateHistoricalChart();
+            });
+        }
+        
+        function updateHistoricalChart() {
+            // This would update the chart based on checkbox states
+            // For now, just log the state
+            const showConfidence = document.getElementById('showConfidenceIntervals').checked;
+            const showSeasonal = document.getElementById('showSeasonalFactors').checked;
+            
+            console.log('Chart options updated:', { showConfidence, showSeasonal });
+        }
+        
+        function renderDiseaseDistribution() {
+            console.log('🔍 Validating data for disease distribution...');
+            
+            if (!diseaseData || !diseaseData.diseases) {
+                console.error('❌ No disease data available');
+                throw new Error('No disease data');
+            }
+            
+            const diseases = diseaseData.diseases;
+            const diseaseKeys = Object.keys(diseases);
+            
+            if (diseaseKeys.length === 0) {
+                console.error('❌ No diseases found in data');
+                throw new Error('No diseases found');
+            }
+            
+            console.log('✅ Found diseases for distribution chart:', diseaseKeys);
+            
+            const ctx = document.getElementById('diseaseDistributionChart').getContext('2d');
+            
+            // Validate that diseases have required data
+            const validDiseases = diseaseKeys.filter(key => {
+                const disease = diseases[key];
+                const isValid = disease && 
+                    typeof disease.total_cases === 'number' && 
+                    disease.name;
+                
+                if (!isValid) {
+                    console.warn(`⚠️ Invalid data for disease ${key}:`, disease);
+                }
+                
+                return isValid;
+            });
+            
+            if (validDiseases.length === 0) {
+                throw new Error('No valid disease data found for distribution chart');
+            }
+            
+            console.log('✅ Valid diseases for chart:', validDiseases);
+            
+            charts.distribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: validDiseases.map(key => diseases[key].name),
+                    datasets: [{
+                        data: validDiseases.map(key => diseases[key].total_cases),
+                        backgroundColor: validDiseases.map(key => diseaseColors[key]),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderMonthlyTrends() {
+            console.log('🔍 Validating data for monthly trends...');
+            
+            if (!diseaseData || !diseaseData.diseases) {
+                console.error('❌ No disease data available for monthly trends');
+                throw new Error('No disease data for monthly trends');
+            }
+            
+            const diseases = diseaseData.diseases;
+            const diseaseKeys = Object.keys(diseases);
+            
+            if (diseaseKeys.length === 0) {
+                console.error('❌ No diseases found for monthly trends');
+                throw new Error('No diseases found for monthly trends');
+            }
+            
+            console.log('✅ Found diseases for monthly trends:', diseaseKeys);
+            
+            const ctx = document.getElementById('monthlyTrendsChart').getContext('2d');
+            
+            // Validate that diseases have monthly_trends data
+            const validDiseases = diseaseKeys.filter(key => {
+                const disease = diseases[key];
+                const isValid = disease && 
+                    Array.isArray(disease.monthly_trends) && 
+                    disease.monthly_trends.length > 0;
+                
+                if (!isValid) {
+                    console.warn(`⚠️ Invalid monthly trends data for disease ${key}:`, disease?.monthly_trends);
+                }
+                
+                return isValid;
+            });
+            
+            if (validDiseases.length === 0) {
+                throw new Error('No valid monthly trends data found');
+            }
+            
+            console.log('✅ Valid diseases with monthly trends:', validDiseases);
+            
+            // Raccoglie tutti i mesi unici
+            const allMonths = new Set();
+            validDiseases.forEach(key => {
+                const disease = diseases[key];
+                disease.monthly_trends.forEach(trend => {
+                    allMonths.add(trend.month);
+                });
+            });
+            
+            const months = Array.from(allMonths).sort();
+            console.log('✅ Found months:', months);
+            
+            const datasets = validDiseases.map(key => {
+                const disease = diseases[key];
+                const data = months.map(month => {
+                    const trend = disease.monthly_trends.find(t => t.month === month);
+                    return trend ? trend.cases : 0;
+                });
+                
+                console.log(`✅ Dataset for ${disease.name}:`, data);
+                
+                return {
+                    label: disease.name,
+                    data: data,
+                    borderColor: diseaseColors[key],
+                    backgroundColor: diseaseColors[key] + '20',
+                    fill: false,
+                    tension: 0.1
+                };
+            });
+            
+            charts.trends = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months.map(m => new Date(m).toLocaleDateString('it-IT', {year: 'numeric', month: 'short'})),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderRegionalComparison() {
+            const ctx = document.getElementById('regionalComparisonChart').getContext('2d');
+            const diseases = diseaseData.diseases;
+            
+            // Prendi i top 10 comuni per ogni malattia
+            const topRegions = new Set();
+            Object.values(diseases).forEach(disease => {
+                disease.geographic_distribution.slice(0, 5).forEach(region => {
+                    topRegions.add(region.comune_residenza_codice_istat);
+                });
+            });
+            
+            const regions = Array.from(topRegions);
+            
+            // Crea labels con ISTAT code e nome del posto
+            const regionLabels = regions.map(istatCode => {
+                const placeName = istatPlaceNames[istatCode] || 'Comune non identificato';
+                return [`${istatCode}`, `${placeName}`];
+            });
+            
+            const datasets = Object.keys(diseases).map(key => {
+                const disease = diseases[key];
+                const data = regions.map(region => {
+                    const regionData = disease.geographic_distribution.find(r => r.comune_residenza_codice_istat === region);
+                    return regionData ? regionData.case_count : 0;
+                });
+                
+                return {
+                    label: disease.name,
+                    data: data,
+                    backgroundColor: diseaseColors[key],
+                    borderColor: diseaseColors[key],
+                    borderWidth: 1
+                };
+            });
+            
+            charts.regional = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: regionLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const istatCode = regions[context[0].dataIndex];
+                                    const placeName = istatPlaceNames[istatCode] || 'Comune non identificato';
+                                    return `${placeName} (${istatCode})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderMap() {
+            if (map) {
+                map.remove();
+                map = null;
+            }
+            map = L.map('diseaseMap').setView([41.8719, 12.5674], 6); // Centro Italia
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            const legend = document.getElementById('mapLegend');
+            legend.innerHTML = '<h4>Legenda:</h4>';
+            
+            Object.keys(diseaseData.diseases).forEach(key => {
+                const disease = diseaseData.diseases[key];
+                let markersAdded = 0;
+                
+                // Aggiungi alla leggenda
+                legend.innerHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: ${diseaseColors[key]}"></div>
+                        <span>${disease.name}</span>
+                    </div>
+                `;
+                
+                // Aggiungi markers sulla mappa
+                disease.geographic_distribution.forEach(region => {
+                    const coords = istatCoordinates[region.comune_residenza_codice_istat];
+                    if (coords) {
+                        const marker = L.circleMarker(coords, {
+                            radius: Math.max(5, Math.min(25, region.case_count * 2)),
+                            fillColor: diseaseColors[key],
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.6
+                        }).addTo(map);
+                        
+                        marker.bindPopup(`
+                            <strong>${disease.name}</strong><br>
+                            Codice ISTAT: ${region.comune_residenza_codice_istat}<br>
+                            Casi: ${region.case_count}<br>
+                            Ultimo caso: ${new Date(region.latest_case).toLocaleDateString('it-IT')}
+                        `);
+                        markersAdded += 1;
+                    }
+                });
+
+                // Fallback marker if no real coordinates were found
+                if (markersAdded === 0) {
+                    const fallbackCenters = {
+                        influenza: [41.9, 12.5],
+                        legionellosi: [40.9, 14.3],
+                        hepatitis_a: [37.5, 15.0]
+                    };
+                    const coords = fallbackCenters[key] || [41.0, 12.0];
+                    const marker = L.circleMarker(coords, {
+                        radius: 12,
+                        fillColor: diseaseColors[key],
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 0.9,
+                        fillOpacity: 0.7
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <strong>${disease.name}</strong><br>
+                        Posizione indicativa (dati senza coordinate ISTAT)
+                    `);
+                }
+            });
+        }
+        
+        function renderTables() {
+            const tablesDiv = document.getElementById('regionalTables');
+            
+            tablesDiv.innerHTML = Object.keys(diseaseData.diseases).map(key => {
+                const disease = diseaseData.diseases[key];
+                
+                const tableRows = disease.geographic_distribution.map(region => {
+                    const placeName = istatPlaceNames[region.comune_residenza_codice_istat] || 'Comune non identificato';
+                    return `
+                        <tr>
+                            <td>${region.comune_residenza_codice_istat}</td>
+                            <td><strong>${placeName}</strong></td>
+                            <td>${region.case_count}</td>
+                            <td>${new Date(region.latest_case).toLocaleDateString('it-IT')}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                return `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: ${diseaseColors[key]}; margin-bottom: 15px;">${disease.name}</h3>
+                        <table class="region-table">
+                            <thead>
+                                <tr>
+                                    <th>Codice ISTAT</th>
+                                    <th>Comune</th>
+                                    <th>Casi</th>
+                                    <th>Ultimo Caso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function refreshData() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            // Distruggi grafici esistenti
+            Object.values(charts).forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    chart.destroy();
+                }
+            });
+            charts = {};
+
+            if (map) {
+                map.remove();
+                map = null;
+            }
+            if (miniMap) {
+                miniMap.remove();
+                miniMap = null;
+            }
+
+            // Ricarica dati
+            loadData();
+        }
+        
+        // Carica i dati all'avvio
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM Content Loaded');
+            
+            // Check if Chart.js is available
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js not loaded!');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Errore: Chart.js non caricato';
+                return;
+            } else {
+                console.log('✅ Chart.js loaded successfully');
+            }
+            
+            // Check if Leaflet is available  
+            if (typeof L === 'undefined') {
+                console.error('❌ Leaflet not loaded!');
+            } else {
+                console.log('✅ Leaflet loaded successfully');
+            }
+            
+            // Initialize time filter
+            console.log('🕒 Initializing time filter...');
+            initializeTimeFilter();
+            
+            // Add event listener for refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('🔄 Refresh button clicked');
+                    refreshData();
+                });
+                console.log('✅ Refresh button event listener added');
+            } else {
+                console.error('❌ Refresh button not found');
+            }
+            
+            // Load initial data
+            console.log('📡 Starting initial data load...');
+            loadData();
+        });
+    </script>
+</body>
+</html>
