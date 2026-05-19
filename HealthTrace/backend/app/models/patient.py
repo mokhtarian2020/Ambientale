@@ -35,7 +35,7 @@ class Patient(Base):
     eni_code = Column(String)  # ENI code
     surname = Column(String, nullable=False)
     name = Column(String, nullable=False)
-    gender = Column(Enum(Gender), nullable=False)
+    gender = Column(Enum(Gender, values_callable=lambda x: [e.value for e in x]), nullable=False)
     birth_date = Column(Date, nullable=False)
     birth_country = Column(String)
     birth_province = Column(String)

@@ -152,7 +152,53 @@ services:
       - healthtrace_network
     restart: unless-stopped
 
-  # Nginx Reverse Proxy
+  # ── Apache Superset — BI / Dashboard connected to HealthTrace DWH ──────────
+  superset-db:
+    image: postgres:14-alpine
+    container_name: superset_db
+    environment:
+      POSTGRES_DB: superset
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset_password
+    volumes:
+      - superset_db_data:/var/lib/postgresql/data
+    networks:
+      - healthtrace_network
+    restart: unless-stopped
+
+  superset:
+    image: apache/superset:latest
+    container_name: healthtrace_superset
+    depends_on:
+      - superset-db
+      - database
+    environment:
+      SUPERSET_SECRET_KEY: "healthtrace-superset-secret-change-in-prod"
+      DATABASE_URL: "postgresql+psycopg2://superset:superset_password@superset-db:5432/superset"
+      # Allow Superset to reach the HealthTrace DWH (same network)
+      HEALTHTRACE_DWH_URL: "postgresql+psycopg2://healthtrace:healthtrace_password@database:5432/healthtrace"
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./deployment/superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - healthtrace_network
+    restart: unless-stopped
+    command: >
+      bash -c "
+        superset db upgrade &&
+        superset fab create-admin
+          --username admin
+          --firstname HealthTrace
+          --lastname Admin
+          --email admin@healthtrace.it
+          --password admin &&
+        superset init &&
+        /usr/bin/run-server.sh
+      "
+
+  # ── Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     container_name: healthtrace_nginx
@@ -178,6 +224,8 @@ volumes:
   backend_uploads:
   pipeline_data:
   analytics_models:
+  superset_db_data:
+  superset_home:
 
 networks:
   healthtrace_network:

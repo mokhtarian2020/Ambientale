@@ -17,7 +17,8 @@ import pandas as pd
 from app.core.database import get_db
 from app.core.auth import get_current_active_user
 from app.models.user import User, UserRole
-from app.models.environmental import EnvironmentalData, ClimateData
+from app.models.environmental import EnvironmentalData
+from app.models.climate import ClimateData
 
 router = APIRouter()
 

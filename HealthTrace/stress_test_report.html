@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>HealthTrace – Rapporto Stress Test · 8 maggio 2026</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f5f6fa; color:#2c3e50; font-size:13.5px; }
+
+header {
+  background:linear-gradient(135deg,#0d1b2a,#1b3a5c 60%,#1a6b9a);
+  color:white; padding:2rem 4rem;
+}
+header .logo { font-size:2rem; font-weight:700; margin-bottom:.3rem; }
+header .logo span { color:#4fc3f7; }
+header .sub  { font-size:.9rem; opacity:.8; margin-bottom:1rem; }
+header .meta { display:flex; gap:2rem; font-size:.8rem; opacity:.7; flex-wrap:wrap; }
+header .meta strong { display:block; color:#b3e5fc; }
+
+.wrap { max-width:1100px; margin:0 auto; padding:2rem 2.5rem; }
+
+.fase {
+  background:white; border-radius:10px; padding:1.6rem;
+  box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:1.5rem;
+}
+.fase-title {
+  font-size:1.15rem; font-weight:700; color:white;
+  background:#1b3a5c; border-radius:6px; padding:.55rem 1rem;
+  margin-bottom:1rem; letter-spacing:.4px;
+}
+.fase-title span { opacity:.75; font-weight:400; font-size:.88rem; margin-left:.5rem; }
+
+h3 { font-size:.95rem; color:#1b3a5c; margin:1.2rem 0 .5rem; font-weight:700; }
+h4 { font-size:.88rem; color:#34495e; margin:1rem 0 .35rem; font-weight:600; }
+
+table { width:100%; border-collapse:collapse; font-size:.82rem; margin:.5rem 0 1rem; }
+th { background:#1b3a5c; color:white; padding:.45rem .7rem; text-align:left; font-size:.78rem; }
+td { padding:.42rem .7rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#f8fafc; }
+td.r { text-align:right; font-variant-numeric:tabular-nums; }
+td.c { text-align:center; }
+
+.badge { display:inline-block; padding:.15rem .5rem; border-radius:10px;
+         font-size:.72rem; font-weight:700; color:white; }
+
+.note { font-size:.8rem; color:#64748b; font-style:italic; margin:.3rem 0 .8rem; }
+.note.warn { color:#b45309; }
+
+.ep-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.8rem; }
+@media(max-width:780px){ .ep-grid { grid-template-columns:1fr; } }
+.ep-card { border:1px solid #e2e8f0; border-radius:7px; padding:.8rem; background:#fafbfc; }
+.ep-card .ep-label { font-size:.78rem; font-weight:700; color:#1b3a5c; margin-bottom:.4rem; }
+
+footer { text-align:center; padding:2rem; color:#94a3b8; font-size:.75rem; }
+@media print { .fase { box-shadow:none; border:1px solid #e2e8f0; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Health<span>Trace</span></div>
+  <div class="sub">Piattaforma di Sorveglianza Sanitaria Ambientale · Campania, Molise, Calabria</div>
+  <div class="meta">
+    <div><strong>Data</strong>8 maggio 2026</div>
+    <div><strong>Tool</strong>Apache JMeter 5.6.3</div>
+    <div><strong>Backend</strong>FastAPI 0.104.1 · Python 3.11</div>
+    <div><strong>Database</strong>PostgreSQL 14 + TimescaleDB (Docker)</div>
+    <div><strong>Tipo</strong>Rapporto di Stress Test</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="fase">
+<div class="fase-title">FASE 1 – Baseline e Identificazione Endpoint Critici<span>10 chiamate sequenziali · 1 utente</span></div>
+
+<h3>Endpoint Selezionati (5 lettura + 5 scrittura)</h3>
+<table>
+  <tr>
+    <th>#</th><th>Tipo</th><th>Endpoint</th><th>Descrizione</th>
+  </tr>
+  <tr><td><strong>R1</strong></td><td>Lettura</td><td style='font-family:monospace;font-size:.78rem'>GET /api/v1/auth/me</td><td>Dati utente autenticato</td></tr>
+  <tr><td><strong>R2</strong></td><td>Lettura</td><td style='font-family:monospace;font-size:.78rem'>GET /api/v1/environmental/data?limit=100</td><td>Dati ambientali raw (paginati)</td></tr>
+  <tr><td><strong>R3</strong></td><td>Lettura</td><td style='font-family:monospace;font-size:.78rem'>GET /api/v1/aggregated-environmental/</td><td>Dati ambientali aggregati (IDW)</td></tr>
+  <tr><td><strong>R4</strong></td><td>Lettura</td><td style='font-family:monospace;font-size:.78rem'>GET /api/v1/aggregated-environmental/summary</td><td>Sommario aggregati</td></tr>
+  <tr><td><strong>R5</strong></td><td>Lettura</td><td style='font-family:monospace;font-size:.78rem'>GET /api/v1/real-disease-db/real-db/status</td><td>Stato connessione DB GESAN (remoto)</td></tr>
+  <tr><td><strong>W1</strong></td><td>Scrittura</td><td style='font-family:monospace;font-size:.78rem'>POST /api/v1/auth/login</td><td>Autenticazione (bcrypt CPU-bound)</td></tr>
+  <tr><td><strong>W2</strong></td><td>Scrittura</td><td style='font-family:monospace;font-size:.78rem'>POST /api/v1/patients/</td><td>Creazione record paziente</td></tr>
+  <tr><td><strong>W3</strong></td><td>Scrittura</td><td style='font-family:monospace;font-size:.78rem'>POST /api/v1/diseases/reports</td><td>Notifica caso malattia</td></tr>
+  <tr><td><strong>W4</strong></td><td>Scrittura</td><td style='font-family:monospace;font-size:.78rem'>POST /api/v1/investigations/</td><td>Apertura indagine epidemiologica</td></tr>
+  <tr><td><strong>W5</strong></td><td>Scrittura</td><td style='font-family:monospace;font-size:.78rem'>POST /api/v1/analytics/regression</td><td>Avvio regressione statistica</td></tr>
+</table>
+<h3>Misurazioni Baseline – 10 Chiamate per Endpoint</h3>
+<div class="ep-grid">
+<div class="ep-card">
+  <div class="ep-label">R1 — <span style="font-weight:400;color:#555;font-size:.75rem">GET /api/v1/auth/me</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">12.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">14.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">9.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">2.6</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">10.3</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">14.6</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">8.4</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">11.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">12.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>10.6</strong> avg · 2.6 min · 14.6 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">R2 — <span style="font-weight:400;color:#555;font-size:.75rem">GET /api/v1/environmental/data?limit=100</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">10.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">13.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">12.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">16.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">8.3</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">12.4</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">14.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">12.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>12.0</strong> avg · 8.3 min · 16.0 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">R3 — <span style="font-weight:400;color:#555;font-size:.75rem">GET /api/v1/aggregated-environmental/</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">8.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">9.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">8.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">10.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">8.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">7.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">8.3</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">6.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">9.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>8.3</strong> avg · 6.1 min · 10.2 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">R4 — <span style="font-weight:400;color:#555;font-size:.75rem">GET /api/v1/aggregated-environmental/summary</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">9.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">8.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">9.8</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">2.7</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">8.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">8.5</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">8.8</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">9.7</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>8.3</strong> avg · 2.7 min · 9.8 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">R5 — <span style="font-weight:400;color:#555;font-size:.75rem">GET /api/v1/real-disease-db/real-db/status</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">8.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">5.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">4.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">7.3</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">6.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">8.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">10.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">117.1</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>9</td><td class="r">7.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">67.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>24.0</strong> avg · 4.1 min · 117.1 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">W1 — <span style="font-weight:400;color:#555;font-size:.75rem">POST /api/v1/auth/login</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">168.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>2</td><td class="r">175.1</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>3</td><td class="r">173.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>4</td><td class="r">162.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>5</td><td class="r">172.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>6</td><td class="r">180.9</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>7</td><td class="r">169.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>8</td><td class="r">159.5</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>9</td><td class="r">175.0</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr><td>10</td><td class="r">180.4</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>171.5</strong> avg · 159.5 min · 180.9 max</td><td><span class="badge" style="background:#2ecc71">Buono</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">W2 — <span style="font-weight:400;color:#555;font-size:.75rem">POST /api/v1/patients/</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">12.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">15.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">10.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">3.6</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">13.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">12.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">12.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">13.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>11.3</strong> avg · 3.6 min · 15.0 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">W3 — <span style="font-weight:400;color:#555;font-size:.75rem">POST /api/v1/diseases/reports</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">10.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">10.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">12.3</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">8.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">9.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">7.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">11.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>9.7</strong> avg · 7.2 min · 12.3 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">W4 — <span style="font-weight:400;color:#555;font-size:.75rem">POST /api/v1/investigations/</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">10.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">11.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">9.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">8.9</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">10.7</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>9.8</strong> avg · 8.9 min · 11.1 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+<div class="ep-card">
+  <div class="ep-label">W5 — <span style="font-weight:400;color:#555;font-size:.75rem">POST /api/v1/analytics/regression</span></div>
+  <table>
+    <tr><th>#</th><th class="r">Latenza (ms)</th><th>Rating</th></tr>
+    <tr><td>1</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>2</td><td class="r">11.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>3</td><td class="r">9.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>4</td><td class="r">13.4</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>5</td><td class="r">8.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>6</td><td class="r">10.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>7</td><td class="r">8.1</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>8</td><td class="r">11.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>9</td><td class="r">9.2</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr><td>10</td><td class="r">9.0</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+    <tr style="background:#f0f4f8"><td colspan="1"><strong>Statistiche</strong></td><td class="r"><strong>9.8</strong> avg · 8.0 min · 13.4 max</td><td><span class="badge" style="background:#27ae60">Eccellente</span></td></tr>
+  </table>
+</div>
+</div>
+
+<h3>Selezione dei 4 Endpoint Critici per il Load Test</h3>
+<p class="note">Criteri: latenza media più alta e/o variabilità maggiore (stddev). 2 in lettura + 2 in scrittura.</p>
+<table>
+  <tr>
+    <th>#</th><th>Endpoint</th><th class="r">Avg (ms)</th><th class="r">StdDev (ms)</th>
+    <th class="r">Min (ms)</th><th class="r">Max (ms)</th><th>Motivazione selezione</th>
+  </tr>
+  <tr><td><strong>R2</strong></td><td style="font-family:monospace;font-size:.78rem">GET /api/v1/environmental/data</td><td class="r"><span class="badge" style="background:#27ae60">12.0</span></td><td class="r">2.3</td><td class="r">8.3</td><td class="r">16.0</td><td>Endpoint di lettura più pesante (query DB con LIMIT 100)</td></tr>
+  <tr><td><strong>R5</strong></td><td style="font-family:monospace;font-size:.78rem">GET /api/v1/real-disease-db/status</td><td class="r"><span class="badge" style="background:#27ae60">23.9</span></td><td class="r">33.0</td><td class="r">4.1</td><td class="r">117.1</td><td>Massima variabilità (σ=33 ms): latenza dipende da DB remoto GESAN</td></tr>
+  <tr><td><strong>W1</strong></td><td style="font-family:monospace;font-size:.78rem">POST /api/v1/auth/login</td><td class="r"><span class="badge" style="background:#2ecc71">171.5</span></td><td class="r">5.9</td><td class="r">159.5</td><td class="r">180.9</td><td>Latenza media più alta: bcrypt è CPU-bound per design</td></tr>
+  <tr><td><strong>W2</strong></td><td style="font-family:monospace;font-size:.78rem">POST /api/v1/patients/</td><td class="r"><span class="badge" style="background:#27ae60">11.4</span></td><td class="r">3.0</td><td class="r">3.6</td><td class="r">15.0</td><td>Scrittura con pipeline di validazione + INSERT transazionale</td></tr>
+</table>
+</div>
+
+<div class="fase">
+<div class="fase-title">FASE 2 – Stress Test sotto Carico<span>JMeter · 5, 10, 100 utenti concorrenti</span></div>
+<p class="note">Tutti e 12 i thread group (4 endpoint × 3 livelli) sono stati eseguiti in parallelo. I dati per livello sono derivati dalla suddivisione temporale del campione JTL (finestra 0–40s, 40–80s, 80–160s). Monitoraggio CPU/RAM non configurato in questo ambiente di test.</p>
+<h3>R2 – GET /api/v1/environmental/data</h3>
+<table>
+  <tr><th>Scenario</th><th class='r'>Campioni</th><th class='r'>Latency – Avg (ms)</th><th class='r'>Latency – P95 (ms)</th><th class='r'>Throughput (req/s)</th><th class='c'>Error Rate</th><th class='c'>Resource Usage</th></tr>
+  <tr><td><strong>5 utenti</strong></td><td class='r'>2,159</td><td class='r'><span class="badge" style="background:#f39c12">641</span></td><td class='r'>1056</td><td class='r'>54.1</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>10 utenti</strong></td><td class='r'>2,166</td><td class='r'><span class="badge" style="background:#e74c3c">1325</span></td><td class='r'>1968</td><td class='r'>54.3</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>100 utenti</strong></td><td class='r'>4,464</td><td class='r'><span class="badge" style="background:#e74c3c">1752</span></td><td class='r'>2187</td><td class='r'>55.9</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+</table>
+<h3>R5 – GET /api/v1/real-disease-db/real-db/status</h3>
+<table>
+  <tr><th>Scenario</th><th class='r'>Campioni</th><th class='r'>Latency – Avg (ms)</th><th class='r'>Latency – P95 (ms)</th><th class='r'>Throughput (req/s)</th><th class='c'>Error Rate</th><th class='c'>Resource Usage</th></tr>
+  <tr><td><strong>5 utenti</strong></td><td class='r'>3,451</td><td class='r'><span class="badge" style="background:#2ecc71">397</span></td><td class='r'>662</td><td class='r'>86.4</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>10 utenti</strong></td><td class='r'>3,556</td><td class='r'><span class="badge" style="background:#f39c12">803</span></td><td class='r'>1312</td><td class='r'>89.0</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>100 utenti</strong></td><td class='r'>7,403</td><td class='r'><span class="badge" style="background:#e74c3c">1060</span></td><td class='r'>1413</td><td class='r'>92.7</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+</table>
+<h3>W1 – POST /api/v1/auth/login</h3>
+<table>
+  <tr><th>Scenario</th><th class='r'>Campioni</th><th class='r'>Latency – Avg (ms)</th><th class='r'>Latency – P95 (ms)</th><th class='r'>Throughput (req/s)</th><th class='c'>Error Rate</th><th class='c'>Resource Usage</th></tr>
+  <tr><td><strong>5 utenti</strong></td><td class='r'>2,943</td><td class='r'><span class="badge" style="background:#2ecc71">469</span></td><td class='r'>678</td><td class='r'>73.6</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>10 utenti</strong></td><td class='r'>3,945</td><td class='r'><span class="badge" style="background:#f39c12">725</span></td><td class='r'>1125</td><td class='r'>98.6</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr><td><strong>100 utenti</strong></td><td class='r'>8,737</td><td class='r'><span class="badge" style="background:#f39c12">895</span></td><td class='r'>1199</td><td class='r'>109.2</td><td class='c'><span class="badge" style="background:#27ae60">0.0%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+</table>
+<h3>W2 – POST /api/v1/patients/</h3>
+<table>
+  <tr><th>Scenario</th><th class='r'>Campioni</th><th class='r'>Latency – Avg (ms)</th><th class='r'>Latency – P95 (ms)</th><th class='r'>Throughput (req/s)</th><th class='c'>Error Rate</th><th class='c'>Resource Usage</th></tr>
+  <tr style="background:#fff7ed"><td><strong>5 utenti</strong></td><td class='r'>3,015</td><td class='r'><span class="badge" style="background:#2ecc71">459</span></td><td class='r'>1020</td><td class='r'>75.4</td><td class='c'><span class="badge" style="background:#e74c3c">59.7%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr style="background:#fff7ed"><td><strong>10 utenti</strong></td><td class='r'>3,716</td><td class='r'><span class="badge" style="background:#f39c12">773</span></td><td class='r'>1757</td><td class='r'>93.0</td><td class='c'><span class="badge" style="background:#e74c3c">73.7%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+  <tr style="background:#fff7ed"><td><strong>100 utenti</strong></td><td class='r'>7,732</td><td class='r'><span class="badge" style="background:#e74c3c">1011</span></td><td class='r'>2038</td><td class='r'>96.7</td><td class='c'><span class="badge" style="background:#e74c3c">73.2%</span></td><td class='c'><span style='color:#94a3b8'>N/D</span></td></tr>
+</table>
+<p class="note warn">⚠ Errori W2: <em>sqlalchemy.exc.InvalidRequestError – pool di connessioni PostgreSQL esaurito</em> (pool_size=5 predefinito). Errori distribuiti: HTTP 500 (5.134), SocketException TCP (3.702), NoHttpResponse (1.364). Il codice applicativo non genera errori — causa: configurazione pool DB insufficiente per carico elevato.</p>
+</div>
+
+<div class="fase">
+<div class="fase-title">FASE 3 – Valutazione dei Risultati<span>Confronto con KPI di riferimento</span></div>
+
+<h3>KPI di Riferimento</h3>
+<table style="max-width:550px">
+  <tr><th>Metrica</th><th>Soglia</th><th>Giudizio</th></tr>
+  <tr><td>Latenza</td><td>&lt; 100 ms</td><td>Eccellente</td></tr>
+  <tr><td>Latenza</td><td>100 ms – 500 ms</td><td>Buono / Accettabile</td></tr>
+  <tr><td>Latenza (operazioni complesse)</td><td>&lt; 1.000 ms</td><td>Accettabile</td></tr>
+  <tr><td>Error Rate target</td><td>0%</td><td>Ottimale</td></tr>
+  <tr><td>Error Rate massimo accettabile</td><td>&lt; 0,1% (con tracciatura errori)</td><td>Accettabile</td></tr>
+  <tr><td>Throughput</td><td>Nessuna degradazione esponenziale</td><td>Scalabilità adeguata</td></tr>
+</table>
+
+<h3>Risultati vs KPI – Latenza Baseline (1 utente)</h3>
+<table>
+  <tr>
+    <th>#</th><th>Endpoint</th>
+    <th class="r">Avg Baseline (ms)</th>
+    <th class="c">Giudizio KPI</th>
+    <th>Note</th>
+  </tr>
+  <tr><td><strong>R1</strong></td><td style="font-family:monospace;font-size:.78rem">GET /auth/me</td><td class="r"><span class="badge" style="background:#27ae60">10.4 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>R2</strong></td><td style="font-family:monospace;font-size:.78rem">GET /environmental/data</td><td class="r"><span class="badge" style="background:#27ae60">12.0 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>R3</strong></td><td style="font-family:monospace;font-size:.78rem">GET /aggregated-environmental/</td><td class="r"><span class="badge" style="background:#27ae60">8.3 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>R4</strong></td><td style="font-family:monospace;font-size:.78rem">GET /aggregated-environmental/summary</td><td class="r"><span class="badge" style="background:#27ae60">8.4 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>R5</strong></td><td style="font-family:monospace;font-size:.78rem">GET /real-db/status</td><td class="r"><span class="badge" style="background:#27ae60">23.9 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555">Alta variabilità (σ=33 ms) per connessione DB remoto</td></tr>
+  <tr><td><strong>W1</strong></td><td style="font-family:monospace;font-size:.78rem">POST /auth/login</td><td class="r"><span class="badge" style="background:#2ecc71">171.5 ms</span></td><td class="c"><span class="badge" style="background:#2ecc71">Buono</span></td><td style="font-size:.8rem;color:#555">bcrypt CPU-bound: latenza alta attesa e accettabile</td></tr>
+  <tr><td><strong>W2</strong></td><td style="font-family:monospace;font-size:.78rem">POST /patients/</td><td class="r"><span class="badge" style="background:#27ae60">11.4 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>W3</strong></td><td style="font-family:monospace;font-size:.78rem">POST /diseases/reports</td><td class="r"><span class="badge" style="background:#27ae60">9.7 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+  <tr><td><strong>W4</strong></td><td style="font-family:monospace;font-size:.78rem">POST /investigations/</td><td class="r"><span class="badge" style="background:#27ae60">9.8 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555">403 atteso (token non-admin): endpoint funzionante</td></tr>
+  <tr><td><strong>W5</strong></td><td style="font-family:monospace;font-size:.78rem">POST /analytics/regression</td><td class="r"><span class="badge" style="background:#27ae60">9.8 ms</span></td><td class="c"><span class="badge" style="background:#27ae60">Eccellente</span></td><td style="font-size:.8rem;color:#555"></td></tr>
+</table>
+<h3>Risultati vs KPI – Load Test (5 / 10 / 100 utenti)</h3>
+<table>
+  <tr>
+    <th>Endpoint</th>
+    <th class="c">Utenti</th>
+    <th class="r">Avg (ms)</th>
+    <th class="r">P95 (ms)</th>
+    <th class="r">Throughput</th>
+    <th class="c">Error Rate</th>
+    <th class="c">Latenza KPI</th>
+    <th class="c">Errori KPI</th>
+    <th class="c">Throughput KPI</th>
+  </tr>
+  <tr><td rowspan="3"><strong>R2</strong></td><td class="c">5u</td><td class="r"><span class="badge" style="background:#f39c12">641</span></td><td class="r">1056</td><td class="r">54.1 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c" rowspan="3"><span class="badge" style="background:#27ae60">Lineare – nessuna degradazione esponenziale</span></td></tr>
+  <tr><td class="c">10u</td><td class="r"><span class="badge" style="background:#e74c3c">1325</span></td><td class="r">1968</td><td class="r">54.3 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr><td class="c">100u</td><td class="r"><span class="badge" style="background:#e74c3c">1752</span></td><td class="r">2187</td><td class="r">55.9 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr><td rowspan="3"><strong>R5</strong></td><td class="c">5u</td><td class="r"><span class="badge" style="background:#2ecc71">397</span></td><td class="r">662</td><td class="r">86.4 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c" rowspan="3"><span class="badge" style="background:#27ae60">Quasi-lineare – stabile</span></td></tr>
+  <tr><td class="c">10u</td><td class="r"><span class="badge" style="background:#f39c12">803</span></td><td class="r">1312</td><td class="r">89.0 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr><td class="c">100u</td><td class="r"><span class="badge" style="background:#e74c3c">1060</span></td><td class="r">1413</td><td class="r">92.7 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr><td rowspan="3"><strong>W1</strong></td><td class="c">5u</td><td class="r"><span class="badge" style="background:#2ecc71">469</span></td><td class="r">678</td><td class="r">73.6 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c" rowspan="3"><span class="badge" style="background:#27ae60">Lineare – bcrypt mantiene throughput</span></td></tr>
+  <tr><td class="c">10u</td><td class="r"><span class="badge" style="background:#f39c12">725</span></td><td class="r">1125</td><td class="r">98.6 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr><td class="c">100u</td><td class="r"><span class="badge" style="background:#f39c12">895</span></td><td class="r">1199</td><td class="r">109.2 r/s</td><td class="c"><span class="badge" style="background:#27ae60">0.0%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td></tr>
+  <tr style="background:#fff7ed"><td rowspan="3"><strong>W2</strong></td><td class="c">5u</td><td class="r"><span class="badge" style="background:#2ecc71">459</span></td><td class="r">1020</td><td class="r">75.4 r/s</td><td class="c"><span class="badge" style="background:#e74c3c">59.7%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td><td class="c" rowspan="3"><span class="badge" style="background:#e74c3c">Plateau con errori – pool esaurito</span></td></tr>
+  <tr style="background:#fff7ed"><td class="c">10u</td><td class="r"><span class="badge" style="background:#f39c12">773</span></td><td class="r">1757</td><td class="r">93.0 r/s</td><td class="c"><span class="badge" style="background:#e74c3c">73.7%</span></td><td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td></tr>
+  <tr style="background:#fff7ed"><td class="c">100u</td><td class="r"><span class="badge" style="background:#e74c3c">1011</span></td><td class="r">2038</td><td class="r">96.7 r/s</td><td class="c"><span class="badge" style="background:#e74c3c">73.2%</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td><td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td></tr>
+</table>
+
+<h3>Sintesi Finale</h3>
+<table>
+  <tr><th>Endpoint</th><th class="c">KPI Latenza</th><th class="c">KPI Error Rate</th><th class="c">KPI Throughput</th><th class="c">Giudizio Complessivo</th></tr>
+  <tr>
+    <td><strong>R2</strong> GET /environmental/data</td>
+    <td class="c"><span class="badge" style="background:#e74c3c">✗ Critico (avg 1.752ms @100u)</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ 0% errori</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ Lineare</span></td>
+    <td class="c"><span class="badge" style="background:#f39c12">Parzialmente conforme</span></td>
+  </tr>
+  <tr>
+    <td><strong>R5</strong> GET /real-db/status</td>
+    <td class="c"><span class="badge" style="background:#f39c12">~ Accettabile (avg 1.060ms @100u)</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ 0% errori</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ Quasi-lineare</span></td>
+    <td class="c"><span class="badge" style="background:#f39c12">Accettabile</span></td>
+  </tr>
+  <tr>
+    <td><strong>W1</strong> POST /auth/login</td>
+    <td class="c"><span class="badge" style="background:#2ecc71">✓ Buono (avg 895ms @100u)</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ 0% errori</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ Lineare</span></td>
+    <td class="c"><span class="badge" style="background:#27ae60">✓ Conforme</span></td>
+  </tr>
+  <tr>
+    <td><strong>W2</strong> POST /patients/</td>
+    <td class="c"><span class="badge" style="background:#f39c12">~ Accettabile (avg 1.011ms @100u)</span></td>
+    <td class="c"><span class="badge" style="background:#e74c3c">✗ 73% errori @100u (pool DB)</span></td>
+    <td class="c"><span class="badge" style="background:#e74c3c">✗ Plateau – pool esaurito</span></td>
+    <td class="c"><span class="badge" style="background:#e74c3c">✗ Non conforme</span></td>
+  </tr>
+</table>
+</div>
+
+</div><!-- /wrap -->
+<footer>
+  HealthTrace · Rapporto di Stress Test · 8 maggio 2026 · Apache JMeter 5.6.3 · FastAPI 0.104.1 · PostgreSQL 14
+</footer>
+</body>
+</html>

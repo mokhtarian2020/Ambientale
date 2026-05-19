@@ -27,5 +27,5 @@ def get_db():
 
 def init_db():
     """Initialize database tables"""
-    from app.models import user, patient, disease, environmental, investigation
+    from app.models import user, patient, disease, environmental, investigation, climate, target_diseases
     Base.metadata.create_all(bind=engine)

@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AMBIENTALI_PROVIDER_INTEGRATION_GUIDE</title>
+<style>
+:root { color-scheme: light; }
+body {
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  color: #24292f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+h1,h2,h3,h4,h5,h6 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  line-height: 1.25;
+  color: #1f2328;
+}
+h1 { font-size: 2em; border-bottom: 1px solid #d0d7de; padding-bottom: .3em; }
+h2 { font-size: 1.5em; border-bottom: 1px solid #d0d7de; padding-bottom: .25em; }
+h3 { font-size: 1.25em; }
+p, ul, ol { margin-top: 0; margin-bottom: 12px; }
+ul, ol { padding-left: 24px; }
+code {
+  background: rgba(175,184,193,0.2);
+  border-radius: 6px;
+  padding: .2em .4em;
+  font-family: ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,monospace;
+  font-size: 85%;
+}
+pre {
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 12px;
+  overflow: auto;
+}
+pre code { background: transparent; padding: 0; }
+blockquote {
+  margin: 0 0 12px 0;
+  padding: 0 1em;
+  color: #57606a;
+  border-left: .25em solid #d0d7de;
+}
+table {
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #d0d7de;
+  padding: 6px 10px;
+  text-align: left;
+}
+th { background: #f6f8fa; }
+hr { border: 0; border-top: 1px solid #d0d7de; margin: 24px 0; }
+@page { size: A4; margin: 14mm; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1 id="guida-integrazione-fornitore-dati-ambientali-healthtrace">Guida Integrazione Fornitore Dati Ambientali (HealthTrace)</h1>
+<p>Questo documento definisce in modo operativo cosa l'azienda di fattori ambientali deve implementare/aggiornare per integrarsi con la piattaforma HealthTrace attuale.</p>
+<h2 id="1-ambito-integrazione">1) Ambito Integrazione</h2>
+<p>HealthTrace utilizza due pipeline coordinate:</p>
+<ul>
+<li><code>Flusso Analitico (batch)</code> per DWH, BI e modelli ML.</li>
+<li><code>Flusso Rapido (streaming)</code> per alert a bassa latenza.</li>
+</ul>
+<p>Entrambi i flussi usano Kafka con chiave di partizione <code>istat_code</code> (codice comune a 6 cifre).</p>
+<hr />
+<h2 id="2-topic-kafka-richiesti">2) Topic Kafka Richiesti</h2>
+<p>Il fornitore deve supportare i seguenti topic:</p>
+<ul>
+<li><code>environmental-ingestion-air</code></li>
+<li>Scopo: batch ARPAC (statistiche giornaliere aggregate)</li>
+<li>Key: <code>istat_code</code></li>
+<li><code>environmental-ingestion-meteo</code></li>
+<li>Scopo: batch MeteoHub (statistiche giornaliere aggregate)</li>
+<li>Key: <code>istat_code</code></li>
+<li><code>environmental-realtime-air</code></li>
+<li>Scopo: eventi ARPAC near-realtime</li>
+<li>Key: <code>istat_code</code></li>
+<li><code>environmental-realtime-meteo</code></li>
+<li>Scopo: eventi MeteoHub near-realtime</li>
+<li>Key: <code>istat_code</code></li>
+</ul>
+<p>Topic interni HealthTrace (informativi):</p>
+<ul>
+<li><code>analytics_trigger</code> (alert prodotti dai consumer HealthTrace)</li>
+<li><code>health-data</code> (stream sanitario, key <code>comune_inizio_sintomi_codice_istat</code>)</li>
+</ul>
+<hr />
+<h2 id="3-endpoint-api-che-il-fornitore-deve-mantenere">3) Endpoint API che il fornitore deve mantenere</h2>
+<p>Secondo contratto concordato ed esempi PDF:</p>
+<ul>
+<li><code>POST /arpac/data/arpac_data_stat</code></li>
+<li><code>POST /meteohub/data/meteohub_data_stats</code></li>
+<li>Endpoint raw opzionali (debug/backfill):</li>
+<li><code>POST /arpac/data/arpac_data</code></li>
+<li><code>POST /meteohub/data/meteohub_data</code></li>
+<li>Liste stazioni:</li>
+<li><code>GET /arpac/stations</code></li>
+<li><code>GET /meteohub/stations</code></li>
+</ul>
+<h3 id="comportamento-richiesto-sulle-request">Comportamento richiesto sulle request</h3>
+<ul>
+<li>Gli endpoint <code>_stat</code> sono <code>POST</code> con body JSON (non GET).</li>
+<li>Campo <code>stats</code> obbligatorio: <code>["min","mean","max"]</code>.</li>
+<li>Supporto e applicazione di <code>filter_on_range=true</code>.</li>
+<li>Supporto di <code>validated=true</code> per ARPAC.</li>
+<li>Supporto finestre temporali con timezone esplicita UTC.</li>
+</ul>
+<hr />
+<h2 id="4-contratto-payload-kafka">4) Contratto Payload (Kafka)</h2>
+<h2 id="41-payload-ingestion-batch-giornaliero">4.1 Payload ingestion (batch, giornaliero)</h2>
+<ul>
+<li>Topic per sorgente:</li>
+<li>ARPAC -&gt; <code>environmental-ingestion-air</code></li>
+<li>MeteoHub -&gt; <code>environmental-ingestion-meteo</code></li>
+<li>Un messaggio per stazione per giorno.</li>
+<li>Chiave di partizione: <code>istat_code</code>.</li>
+</ul>
+<p>Campi minimi payload:</p>
+<ul>
+<li><code>source</code> (<code>ARPAC</code> o <code>METEOHUB</code>)</li>
+<li><code>station_id</code></li>
+<li><code>istat_code</code></li>
+<li><code>latitude</code>, <code>longitude</code></li>
+<li><code>period_start</code> (UTC ISO-8601)</li>
+<li><code>period_end</code> (UTC ISO-8601)</li>
+<li><code>aggregation</code> (<code>daily</code>)</li>
+<li><code>parameters[]</code> con:</li>
+<li><code>parameter</code></li>
+<li><code>mean</code>, <code>min</code>, <code>max</code></li>
+<li><code>unit</code></li>
+<li><code>ingested_at</code> (UTC ISO-8601)</li>
+</ul>
+<p>Campi aggiuntivi:</p>
+<ul>
+<li>ARPAC: <code>station_type</code>, <code>slm</code></li>
+<li>MeteoHub: <code>slm</code> da arricchire via SRTM se assente</li>
+</ul>
+<h2 id="42-payload-realtime">4.2 Payload realtime</h2>
+<ul>
+<li>Topic per sorgente:</li>
+<li>ARPAC -&gt; <code>environmental-realtime-air</code></li>
+<li>MeteoHub -&gt; <code>environmental-realtime-meteo</code></li>
+<li>Chiave di partizione: <code>istat_code</code>.</li>
+</ul>
+<p>Campi minimi realtime:</p>
+<ul>
+<li><code>source</code></li>
+<li><code>station_id</code></li>
+<li><code>istat_code</code></li>
+<li><code>timestamp</code> (UTC ISO-8601)</li>
+<li><code>parameters[]</code> con:</li>
+<li><code>parameter</code></li>
+<li><code>value</code></li>
+<li><code>unit</code></li>
+</ul>
+<hr />
+<h2 id="5-regole-qualita-dato-e-normalizzazione">5) Regole Qualità Dato e Normalizzazione</h2>
+<p>Allineamento richiesto tra fornitore e HealthTrace:</p>
+<ul>
+<li>Valori invalidi:</li>
+<li><code>-9999</code> può comparire anche nelle statistiche in alcuni edge case.</li>
+<li>Il fornitore deve filtrare quanto possibile.</li>
+<li>HealthTrace applica comunque un filtro client-side aggiuntivo.</li>
+<li>Unità:</li>
+<li>Coerenza e unità esplicite sempre.</li>
+<li>Conversioni note usate in HealthTrace:<ul>
+<li><code>µg/m**3</code>, <code>μg/m**3</code> -&gt; <code>μg/m³</code></li>
+<li><code>kg/m**2</code> -&gt; <code>mm</code></li>
+<li><code>K</code> -&gt; <code>°C</code></li>
+</ul>
+</li>
+<li>Naming parametri:</li>
+<li><code>PM2,5</code> normalizzato in <code>PM2.5</code>.</li>
+<li>Timezone:</li>
+<li>Sempre UTC esplicito in API e payload Kafka.</li>
+</ul>
+<hr />
+<h2 id="6-policy-eleggibilita-stazioni">6) Policy eleggibilità stazioni</h2>
+<p>Per evitare segnali poco rilevanti (aree non abitate/alta quota):</p>
+<ul>
+<li>Stazioni preferite con <code>slm &lt; 500m</code>.</li>
+<li>Tipi ARPAC ammessi: <code>FONDO</code>, <code>TRAFFICO</code>.</li>
+<li><code>elev_ref</code> MeteoHub è quota sensore, non quota stazione.</li>
+<li>Per il filtro stazione si usa quota SRTM.</li>
+</ul>
+<hr />
+<h2 id="7-comportamento-lato-healthtrace-informativo-per-il-fornitore">7) Comportamento lato HealthTrace (informativo per il fornitore)</h2>
+<ul>
+<li>Consumer ingestion:</li>
+<li>Legge topic ingestion.</li>
+<li>Aggrega per <code>(istat_code, date, source)</code>.</li>
+<li>Applica aggregazione IDW.</li>
+<li>Scrive nel DWH <code>environmental_daily_aggregated</code>.</li>
+<li>Consumer realtime:</li>
+<li>Legge topic realtime.</li>
+<li>Applica controlli soglia.</li>
+<li>Emette eventi su <code>analytics_trigger</code>.</li>
+</ul>
+<p>Esempi soglie attuali:</p>
+<ul>
+<li><code>NO2 &gt; 200 μg/m³</code></li>
+<li><code>PM10 &gt; 50 μg/m³</code></li>
+<li><code>PM2.5 &gt; 25 μg/m³</code></li>
+<li><code>O3 &gt; 120 μg/m³</code></li>
+<li><code>SO2 &gt; 350 μg/m³</code></li>
+<li><code>temperature &gt; 35 °C</code></li>
+<li><code>relative_humidity &gt; 90%</code></li>
+</ul>
+<hr />
+<h2 id="8-punti-da-chiudere-in-sessione-di-allineamento">8) Punti da chiudere in sessione di allineamento</h2>
+<p>Da confermare tra fornitore e HealthTrace:</p>
+<ul>
+<li>Endpoint bootstrap Kafka finali e modalità auth.</li>
+<li>Modalità pubblicazione:</li>
+<li>fornitore direttamente sui topic HealthTrace oppure bridge.</li>
+<li>Retention topic per replay (consigliato minimo: 7 giorni su ingestion).</li>
+<li>Strategia versionamento schema JSON.</li>
+<li>SLA realtime (latenza evento-&gt;alert).</li>
+<li>Strategia backfill storico:</li>
+<li>intervallo date</li>
+<li>API pull vs consegna batch file</li>
+</ul>
+<hr />
+<h2 id="9-checklist-go-live">9) Checklist Go-Live</h2>
+<p>Go-live approvato quando tutte vere:</p>
+<ul>
+<li>[ ] Risposte <code>_stat</code> corrette su ARPAC e MeteoHub.</li>
+<li>[ ] Pubblicazione corretta su 4 topic ambientali con key corretta.</li>
+<li>[ ] Payload con campi UTC e unità conformi.</li>
+<li>[ ] Valori invalidi gestiti senza inquinare le medie giornaliere.</li>
+<li>[ ] Consumer HealthTrace ingestiscono senza errori di schema.</li>
+<li>[ ] Dati visibili in <code>environmental_daily_aggregated</code>.</li>
+<li>[ ] Alert realtime pubblicati su <code>analytics_trigger</code>.</li>
+<li>[ ] Backfill completato sul periodo storico concordato.</li>
+</ul>
+  </div>
+</body>
+</html>

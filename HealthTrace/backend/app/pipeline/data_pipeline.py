@@ -15,7 +15,7 @@ import json
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from pathlib import Path
 import asyncio
@@ -380,21 +380,21 @@ class KafkaDataStreamer:
             )
         return self.producer
     
-    def send_to_analytics_queue(self, data: Dict[str, Any], topic: str = "environmental_data"):
+    def send_to_analytics_queue(self, data: Dict[str, Any], topic: str = "analytics_trigger"):
         """Send data to Kafka for analytics processing"""
         
         try:
             producer = self.get_producer()
             
-            # Add metadata
+            # Add metadata with explicit UTC timestamp
             message = {
-                'timestamp': datetime.now().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'data_type': data.get('data_type', 'unknown'),
                 'data': data
             }
             
-            # Send to Kafka
-            future = producer.send(topic, value=message)
+            istat_code = data.get('istat_code')
+            future = producer.send(topic, value=message, key=istat_code)
             result = future.get(timeout=10)
             
             logger.info(f"Sent message to Kafka topic {topic}: {result}")
@@ -407,7 +407,7 @@ class KafkaDataStreamer:
             logger.error(f"Error sending to Kafka: {str(e)}")
             return False
     
-    def consume_analytics_queue(self, topic: str = "environmental_data"):
+    def consume_analytics_queue(self, topic: str = "analytics_trigger"):
         """Consume messages from Kafka for analytics processing"""
         
         consumer = KafkaConsumer(
@@ -583,7 +583,7 @@ async def trigger_analytics(
     message = {
         'data_type': 'manual_trigger',
         'disease': disease,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     }
     
     success = orchestrator.kafka_streamer.send_to_analytics_queue(message, "analytics_trigger")

@@ -1,0 +1,47 @@
+/* =====================================================
+   HealthTrace — Design System Tokens
+   Fonte: D.4 §1.1 Definizione dello Stile UI
+   ===================================================== */
+
+:root {
+    /* ---- Navigation ---- */
+    --v-nav-bg: #0F3157;
+    /* Navbar principale — Blu Notte istituzionale */
+    --v-nav-active-bg: #EDEDED;
+    /* Menu laterale voce attiva */
+    --v-submenu-active: #E0E0E0;
+    /* Sottomenu attivo */
+    --v-submenu-text: #123B67;
+    /* Testo voce sottomenu */
+
+    /* ---- Action Buttons ---- */
+    --v-btn-success: #28A745;
+    /* Inserimento, conferma, creazione record */
+    --v-btn-warning: #FFC107;
+    /* Modifica, revoca, azioni con cautela */
+    --v-btn-danger: #DC3545;
+    /* Eliminazione definitiva, azioni distruttive */
+    --v-btn-info: #16A3B7;
+    /* Ricerca, avvio processi, sola lettura */
+    --v-btn-radius: 4px;
+    /* Border-radius uniforme tutti i bottoni */
+
+    /* ---- Typography ---- */
+    --v-text-table: #0E3964;
+    /* Dati tabellari (CF, ID, stringhe alfanumeriche) */
+    --v-text-form: #616161;
+    /* Etichette form e icone inattive */
+    --v-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --v-line-height: 1.4;
+
+    /* ---- Icons ---- */
+    --v-icon-inactive: #616161;
+    /* Stato inattivo */
+    --v-icon-active: #FFFFFF;
+    /* Stato attivo su fondo scuro */
+
+    /* ---- Background ---- */
+    --v-bg-default: #F5F5F5;
+}

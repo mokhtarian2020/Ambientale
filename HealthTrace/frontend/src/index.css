@@ -1,0 +1,67 @@
+/* HealthTrace — Global Styles */
+@import './styles/variables.css';
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--v-font-family);
+    line-height: var(--v-line-height);
+    background-color: var(--v-bg-default);
+    color: #212121;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---- Tables: use dedicated table-text color ---- */
+table td,
+table th,
+.MuiDataGrid-cell,
+.MuiTableCell-root {
+    color: var(--v-text-table);
+    line-height: var(--v-line-height);
+    font-family: var(--v-font-family);
+}
+
+/* ---- Form labels & helper text ---- */
+label,
+.MuiFormLabel-root,
+.MuiInputLabel-root,
+.MuiFormHelperText-root {
+    color: var(--v-text-form);
+    font-family: var(--v-font-family);
+}
+
+/* ---- Button radius override (MUI uses theme, this covers non-MUI) ---- */
+.btn,
+button:not(.MuiButtonBase-root) {
+    border-radius: var(--v-btn-radius);
+}
+
+/* ---- Navbar ---- */
+.ht-navbar,
+.MuiAppBar-root {
+    background-color: var(--v-nav-bg) !important;
+}
+
+/* ---- Sidebar active state ---- */
+.ht-sidebar-item.active,
+.MuiListItemButton-root.Mui-selected {
+    background-color: var(--v-nav-active-bg) !important;
+    color: var(--v-submenu-text) !important;
+}
+
+/* ---- Icons ---- */
+.MuiSvgIcon-root {
+    color: var(--v-icon-inactive);
+}
+
+.MuiListItemButton-root.Mui-selected .MuiSvgIcon-root,
+.MuiAppBar-root .MuiSvgIcon-root,
+.ht-navbar .MuiSvgIcon-root {
+    color: var(--v-icon-active);
+}

@@ -57,7 +57,7 @@ class PatientResponse(PatientBase):
     updated_at: Optional[datetime] = None
     
     class Config:
-        from_attributes = True
+        orm_mode = True  # Pydantic v1 — was from_attributes (v2 syntax)
 
 
 class PatientSearch(BaseModel):

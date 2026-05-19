@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean, Text, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Float, Boolean, Text, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 
 from app.core.database import Base
@@ -54,6 +54,28 @@ class EnvironmentalData(Base):
     data_source = Column(String)  # ISPRA, ARPA, ISTAT, etc.
     
     # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class EnvironmentalDailyAggregated(Base):
+    """
+    IDW-aggregated daily environmental values per comune (istat_code).
+    Produced by the Kafka IngestionConsumer after aggregating all valid stations
+    in the same comune.  One row per (istat_code, source, period_date).
+    """
+    __tablename__ = "environmental_daily_aggregated"
+    __table_args__ = (
+        UniqueConstraint("istat_code", "source", "period_date", name="uq_env_daily_agg"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    istat_code = Column(String(6), nullable=False, index=True)
+    source = Column(String, nullable=False)          # "ARPAC" | "METEOHUB"
+    period_date = Column(Date, nullable=False, index=True)
+    # JSONB map: {"NO2": 42.1, "PM10": 28.3, "temperature": 18.5, ...}
+    parameters = Column(JSONB, nullable=False, default=dict)
+    station_count = Column(Integer, default=0)       # how many stations contributed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

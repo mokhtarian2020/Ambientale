@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace — Modelli Predittivi</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --nav: #0F3157;
+            --success: #28A745;
+            --warning: #FFC107;
+            --danger: #DC3545;
+            --info: #16A3B7;
+            --txt-table: #0E3964;
+            --txt-form: #616161;
+            --bg: #F5F5F5;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: #212121;
+            line-height: 1.4
+        }
+
+        .navbar {
+            background: var(--nav);
+            color: #fff;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 999;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .25)
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .logo {
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--nav);
+            font-size: 14px;
+            font-weight: 900
+        }
+
+        .navbar h1 {
+            font-size: 18px;
+            font-weight: 700
+        }
+
+        .navbar small {
+            font-size: 11px;
+            color: #aec6e8;
+            margin-left: 4px
+        }
+
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            color: #aec6e8
+        }
+
+        .user-chip {
+            background: rgba(255, 255, 255, .15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #fff
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #fff;
+            border-right: 1px solid #E0E0E0;
+            position: fixed;
+            top: 56px;
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+            padding: 12px 0;
+            z-index: 998
+        }
+
+        .sidebar-section {
+            padding: 8px 16px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #9E9E9E;
+            letter-spacing: .8px;
+            text-transform: uppercase
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            color: #424242;
+            font-size: 13px
+        }
+
+        .nav-item:hover {
+            background: #F5F5F5
+        }
+
+        .nav-item.active {
+            background: #EDEDED;
+            color: #123B67;
+            font-weight: 600;
+            border-left: 3px solid var(--nav)
+        }
+
+        .nav-item .material-icons {
+            font-size: 18px;
+            color: #616161
+        }
+
+        .nav-item.active .material-icons {
+            color: #0F3157
+        }
+
+        .main {
+            margin-left: 220px;
+            margin-top: 56px;
+            padding: 24px
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .page-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--nav)
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08)
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--nav);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: var(--txt-form);
+            margin-bottom: 14px
+        }
+
+        /* Forecast cards */
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px
+        }
+
+        .fc-card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 18px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08)
+        }
+
+        .fc-disease {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--txt-table);
+            margin-bottom: 6px
+        }
+
+        .fc-risk {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px
+        }
+
+        .fc-risk.high {
+            color: var(--danger)
+        }
+
+        .fc-risk.med {
+            color: #e65100
+        }
+
+        .fc-risk.low {
+            color: var(--success)
+        }
+
+        .fc-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 10px
+        }
+
+        .fc-badge.high {
+            background: #fdecea;
+            color: var(--danger)
+        }
+
+        .fc-badge.med {
+            background: #fff8e1;
+            color: #e65100
+        }
+
+        .fc-badge.low {
+            background: #e8f5e9;
+            color: var(--success)
+        }
+
+        .fc-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #F5F5F5
+        }
+
+        .fc-stat .lbl {
+            color: var(--txt-form)
+        }
+
+        .fc-stat .val {
+            font-weight: 600;
+            color: var(--txt-table)
+        }
+
+        .fc-trend {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px
+        }
+
+        /* Main grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px
+        }
+
+        /* Feature importance bars */
+        .feat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px
+        }
+
+        .feat-label {
+            width: 160px;
+            font-size: 12px;
+            color: var(--txt-form);
+            flex-shrink: 0;
+            text-align: right
+        }
+
+        .feat-bar-bg {
+            flex: 1;
+            height: 10px;
+            background: #F5F5F5;
+            border-radius: 5px
+        }
+
+        .feat-bar {
+            height: 100%;
+            border-radius: 5px;
+            background: var(--info)
+        }
+
+        .feat-pct {
+            width: 40px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--txt-table);
+            text-align: right
+        }
+
+        /* Metrics grid */
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px
+        }
+
+        .metric-card {
+            background: var(--bg);
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center
+        }
+
+        .metric-name {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--txt-form);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            margin-bottom: 6px
+        }
+
+        .metric-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--txt-table)
+        }
+
+        .metric-sub {
+            font-size: 10px;
+            color: var(--txt-form);
+            margin-top: 3px
+        }
+
+        /* Risk table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px
+        }
+
+        thead tr {
+            background: #F5F5F5
+        }
+
+        th {
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--txt-form);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            border-bottom: 2px solid #E0E0E0
+        }
+
+        td {
+            padding: 9px 12px;
+            color: var(--txt-table);
+            border-bottom: 1px solid #F5F5F5
+        }
+
+        tr:hover td {
+            background: #FAFAFA
+        }
+
+        .risk-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700
+        }
+
+        .risk-h {
+            background: #fdecea;
+            color: var(--danger)
+        }
+
+        .risk-m {
+            background: #fff8e1;
+            color: #e65100
+        }
+
+        .risk-l {
+            background: #e8f5e9;
+            color: var(--success)
+        }
+
+        .risk-bar-cell {
+            min-width: 100px
+        }
+
+        .risk-bar-bg {
+            height: 6px;
+            background: #E0E0E0;
+            border-radius: 3px;
+            margin-top: 4px
+        }
+
+        .risk-bar {
+            height: 100%;
+            border-radius: 3px
+        }
+
+        /* Model selector */
+        .model-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px
+        }
+
+        .model-tab {
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #E0E0E0;
+            color: #424242;
+            background: #fff;
+            font-weight: 500
+        }
+
+        .model-tab.active {
+            background: var(--nav);
+            color: #fff;
+            border-color: var(--nav)
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="brand">
+            <div class="logo">HT</div>
+            <h1>HealthTrace</h1>
+            <small>Sorveglianza Epidemiologica Ambientale</small>
+        </div>
+        <div class="meta">
+            <span>Campania · Molise · Calabria</span>
+            <span class="user-chip">&#128100; Dr.ssa M. Romano — ASL Campania</span>
+            <span>15 maggio 2026</span>
+        </div>
+    </nav>
+    <aside class="sidebar">
+        <div class="sidebar-section">Principale</div>
+        <div class="nav-item"><span class="material-icons">dashboard</span>Dashboard</div>
+        <div class="nav-item"><span class="material-icons">map</span>Sorveglianza Geografica</div>
+        <div class="sidebar-section">Analisi</div>
+        <div class="nav-item"><span class="material-icons">bubble_chart</span>Correlazioni Amb.–Malattie</div>
+        <div class="nav-item"><span class="material-icons">air</span>Monitoraggio Ambientale</div>
+        <div class="nav-item active"><span class="material-icons">trending_up</span>Modelli Predittivi</div>
+        <div class="sidebar-section">Operativo</div>
+        <div class="nav-item"><span class="material-icons">notifications</span>Gestione Allerte
+            <span
+                style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px">3</span>
+        </div>
+        <div class="nav-item"><span class="material-icons">description</span>Report</div>
+        <div class="nav-item"><span class="material-icons">settings</span>Impostazioni</div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h2>Modelli Predittivi & Prognosi Epidemiologica</h2>
+                <div style="font-size:12px;color:var(--txt-form);margin-top:2px">Previsioni 7–14 giorni · XGBoost +
+                    ARIMAX + DLNM · Training: giugno 2025 – aprile 2026</div>
+            </div>
+            <div style="display:flex;gap:8px">
+                <button
+                    style="background:var(--info);color:#fff;border:none;padding:7px 14px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer">
+                    <span class="material-icons" style="font-size:14px;vertical-align:middle">refresh</span> Aggiorna
+                    Previsioni
+                </button>
+            </div>
+        </div>
+
+        <!-- FORECAST SUMMARY CARDS -->
+        <div class="forecast-grid">
+            <!-- Influenza -->
+            <div class="fc-card" style="border-left:4px solid #0F3157">
+                <div class="fc-disease">Influenza</div>
+                <div class="fc-risk high">&#9650; Rischio Elevato</div>
+                <span class="fc-badge high">Prognosi 7gg: +25–35 casi</span>
+                <div style="font-size:11px;color:var(--txt-form);margin-bottom:6px">Fattore chiave: PM2.5 persistente
+                    sopra soglia</div>
+                <div class="fc-stat"><span class="lbl">Casi attesi (settimana)</span><span class="val"
+                        style="color:var(--danger)">172–188</span></div>
+                <div class="fc-stat"><span class="lbl">Baseline storica</span><span class="val">143</span></div>
+                <div class="fc-stat"><span class="lbl">Confidenza modello</span><span class="val">87%</span></div>
+                <div class="fc-trend" style="color:var(--danger)">&#9650; Trend in crescita</div>
+            </div>
+            <!-- Legionellosi -->
+            <div class="fc-card" style="border-left:4px solid #16A3B7">
+                <div class="fc-disease">Legionellosi</div>
+                <div class="fc-risk med">&#9654; Rischio Moderato</div>
+                <span class="fc-badge med">Prognosi 7gg: +3–6 casi</span>
+                <div style="font-size:11px;color:var(--txt-form);margin-bottom:6px">Fattore chiave: Umidità relativa in
+                    aumento</div>
+                <div class="fc-stat"><span class="lbl">Casi attesi (settimana)</span><span class="val"
+                        style="color:#e65100">27–30</span></div>
+                <div class="fc-stat"><span class="lbl">Baseline storica</span><span class="val">22</span></div>
+                <div class="fc-stat"><span class="lbl">Confidenza modello</span><span class="val">79%</span></div>
+                <div class="fc-trend" style="color:#e65100">&#9654; Trend stabile-crescente</div>
+            </div>
+            <!-- Epatite A -->
+            <div class="fc-card" style="border-left:4px solid #28A745">
+                <div class="fc-disease">Epatite A</div>
+                <div class="fc-risk low">&#9660; Rischio Basso</div>
+                <span class="fc-badge low">Prognosi 7gg: stabile o -1–2</span>
+                <div style="font-size:11px;color:var(--txt-form);margin-bottom:6px">Nessuna precipitazione prevista 7
+                    giorni</div>
+                <div class="fc-stat"><span class="lbl">Casi attesi (settimana)</span><span class="val"
+                        style="color:var(--success)">9–12</span></div>
+                <div class="fc-stat"><span class="lbl">Baseline storica</span><span class="val">10</span></div>
+                <div class="fc-stat"><span class="lbl">Confidenza modello</span><span class="val">82%</span></div>
+                <div class="fc-trend" style="color:var(--success)">&#9660; Trend decrescente</div>
+            </div>
+        </div>
+
+        <!-- MAIN CHART + FEATURE IMPORTANCE -->
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title"><span class="material-icons"
+                        style="font-size:16px;color:var(--nav)">auto_graph</span>Previsione Casi Influenza — Prossimi 14
+                    Giorni (Campania)</div>
+                <div class="card-subtitle">XGBoost + intervallo di confidenza 90% · dato storico vs previsione ·
+                    Campania</div>
+                <div class="model-tabs">
+                    <div class="model-tab active">XGBoost</div>
+                    <div class="model-tab">ARIMAX</div>
+                    <div class="model-tab">DLNM</div>
+                    <div class="model-tab">Ensemble</div>
+                </div>
+                <canvas id="chartForecast" height="170"></canvas>
+            </div>
+
+            <div>
+                <div class="card" style="margin-bottom:16px">
+                    <div class="card-title"><span class="material-icons"
+                            style="font-size:16px;color:var(--warning)">bar_chart</span>Feature Importance — Influenza
+                        (XGBoost)</div>
+                    <div class="card-subtitle">Contributo relativo dei predittori · top 7</div>
+                    <div id="featImportance" style="padding-top:4px"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title"><span class="material-icons"
+                            style="font-size:16px;color:var(--success)">assessment</span>Performance Modello</div>
+                    <div class="card-subtitle">Validazione out-of-sample · set di test gen–apr 2026</div>
+                    <div class="metric-cards">
+                        <div class="metric-card">
+                            <div class="metric-name">R²</div>
+                            <div class="metric-val" style="color:var(--success)">0.87</div>
+                            <div class="metric-sub">Varianza spiegata</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-name">RMSE</div>
+                            <div class="metric-val">8.3</div>
+                            <div class="metric-sub">Casi/settimana</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-name">MAPE</div>
+                            <div class="metric-val">9.2%</div>
+                            <div class="metric-sub">Errore relativo</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-name">MAE</div>
+                            <div class="metric-val">6.1</div>
+                            <div class="metric-sub">Casi/settimana</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RISK TABLE BY PROVINCE -->
+        <div class="card">
+            <div class="card-title"><span class="material-icons"
+                    style="font-size:16px;color:var(--danger)">place</span>Mappa di Rischio per Provincia — Prossimi 7
+                Giorni</div>
+            <div class="card-subtitle">Score di rischio aggregato (0–100) per malattia · basato su predittori ambientali
+                e trend epidemiologici</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Provincia</th>
+                        <th>Regione</th>
+                        <th>Rischio Influenza</th>
+                        <th>Rischio Legionellosi</th>
+                        <th>Rischio Epatite A</th>
+                        <th>Rischio Composito</th>
+                        <th>Azione raccomandata</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Napoli</strong></td>
+                        <td>Campania</td>
+                        <td><span class="risk-pill risk-h">Alto (82)</span>
+                            <div class="risk-bar-bg risk-bar-cell">
+                                <div class="risk-bar" style="width:82%;background:var(--danger)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-m">Medio (54)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:54%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (22)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:22%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:var(--danger)">74 / 100</strong></td>
+                        <td style="color:var(--danger);font-weight:600">&#9888; Allerta preventiva</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Caserta</strong></td>
+                        <td>Campania</td>
+                        <td><span class="risk-pill risk-h">Alto (77)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:77%;background:var(--danger)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-m">Medio (48)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:48%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (19)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:19%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:var(--danger)">68 / 100</strong></td>
+                        <td style="color:var(--danger);font-weight:600">&#9888; Allerta preventiva</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Salerno</strong></td>
+                        <td>Campania</td>
+                        <td><span class="risk-pill risk-m">Medio (52)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:52%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-m">Medio (61)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:61%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (28)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:28%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:#e65100">47 / 100</strong></td>
+                        <td style="color:#e65100;font-weight:600">&#9432; Monitoraggio attivo</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Benevento</strong></td>
+                        <td>Campania</td>
+                        <td><span class="risk-pill risk-l">Basso (31)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:31%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (29)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:29%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (18)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:18%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:var(--success)">27 / 100</strong></td>
+                        <td style="color:var(--success);font-weight:600">&#10003; Nessuna azione</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Campobasso</strong></td>
+                        <td>Molise</td>
+                        <td><span class="risk-pill risk-l">Basso (24)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:24%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (21)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:21%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-l">Basso (14)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:14%;background:var(--success)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:var(--success)">20 / 100</strong></td>
+                        <td style="color:var(--success);font-weight:600">&#10003; Nessuna azione</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Reggio Calabria</strong></td>
+                        <td>Calabria</td>
+                        <td><span class="risk-pill risk-m">Medio (44)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:44%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-m">Medio (50)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:50%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><span class="risk-pill risk-m">Medio (38)</span>
+                            <div class="risk-bar-bg">
+                                <div class="risk-bar" style="width:38%;background:var(--warning)"></div>
+                            </div>
+                        </td>
+                        <td><strong style="color:#e65100">44 / 100</strong></td>
+                        <td style="color:#e65100;font-weight:600">&#9432; Monitoraggio attivo</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        // Forecast chart
+        const hist = [220, 195, 178, 156, 134, 118, 102, 98, 108, 115, 112, 147];
+        const forecast = [null, null, null, null, null, null, null, null, null, null, null, 147, 158, 168, 175, 172, 178, 182, 188, 184, 179, 172, 165, 158, 152];
+        const upper = forecast.map(v => v ? v + 18 : null);
+        const lower = forecast.map(v => v ? Math.max(0, v - 18) : null);
+        const allLabels = ['Dic', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag w1', 'Mag w2', 'w3', 'w4', 'Giu w1', 'Giu w2', '15/5', '16/5', '17/5', '18/5', '19/5', '20/5', '21/5', '22/5', '23/5', '24/5', '25/5', '26/5', '27/5', '28/5'];
+        const histData = [...hist, ...Array(allLabels.length - hist.length).fill(null)];
+        new Chart(document.getElementById('chartForecast'), {
+            type: 'line',
+            data: {
+                labels: allLabels,
+                datasets: [
+                    { label: 'Storico', data: histData, borderColor: '#0F3157', backgroundColor: 'rgba(15,49,87,.08)', fill: true, tension: .4, pointRadius: 2, borderWidth: 2 },
+                    { label: 'Previsione', data: forecast, borderColor: '#DC3545', borderDash: [6, 3], fill: false, tension: .4, pointRadius: 0, borderWidth: 2 },
+                    { label: 'IC superiore 90%', data: upper, borderColor: 'rgba(220,53,69,.2)', backgroundColor: 'rgba(220,53,69,.1)', fill: '+1', tension: .4, pointRadius: 0, borderWidth: 0 },
+                    { label: 'IC inferiore 90%', data: lower, borderColor: 'rgba(220,53,69,.2)', fill: false, tension: .4, pointRadius: 0, borderWidth: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { font: { size: 10 }, color: '#616161' }, filter: i => i.datasetIndex < 2 } },
+                scales: {
+                    y: { grid: { color: '#F5F5F5' }, ticks: { color: '#616161', font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { color: '#616161', font: { size: 9 }, maxRotation: 45 } }
+                }
+            }
+        });
+
+        // Feature importance
+        const feats = [
+            { name: 'PM2.5 (lag 7gg)', pct: 24, color: '#DC3545' },
+            { name: 'Temp. media (lag 5gg)', pct: 19, color: '#FF7043' },
+            { name: 'Umidità relativa', pct: 16, color: '#42A5F5' },
+            { name: 'PM2.5 (lag 3gg)', pct: 14, color: '#EF5350' },
+            { name: 'Casi settimana prec.', pct: 13, color: '#0F3157' },
+            { name: 'NO₂ (lag 5gg)', pct: 8, color: '#9E9E9E' },
+            { name: 'Precipitazioni 7gg', pct: 6, color: '#9E9E9E' },
+        ];
+        const fi = document.getElementById('featImportance');
+        feats.forEach(f => {
+            fi.innerHTML += `
+  <div class="feat-item">
+    <div class="feat-label">${f.name}</div>
+    <div class="feat-bar-bg"><div class="feat-bar" style="width:${f.pct * 4}%;background:${f.color}"></div></div>
+    <div class="feat-pct">${f.pct}%</div>
+  </div>`;
+        });
+    </script>
+</body>
+
+</html>

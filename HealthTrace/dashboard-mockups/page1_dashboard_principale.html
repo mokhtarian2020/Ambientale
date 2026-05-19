@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrace — Dashboard Principale</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --nav: #0F3157;
+            --success: #28A745;
+            --warning: #FFC107;
+            --danger: #DC3545;
+            --info: #16A3B7;
+            --txt-table: #0E3964;
+            --txt-form: #616161;
+            --bg: #F5F5F5;
+            --radius: 4px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: #212121;
+            line-height: 1.4
+        }
+
+        /* NAVBAR */
+        .navbar {
+            background: var(--nav);
+            color: #fff;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 999;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .25)
+        }
+
+        .navbar .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .navbar .brand .logo {
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .navbar .brand .logo span {
+            color: var(--nav);
+            font-size: 16px;
+            font-weight: 900
+        }
+
+        .navbar .brand h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: .3px
+        }
+
+        .navbar .brand small {
+            font-size: 11px;
+            color: #aec6e8;
+            margin-left: 4px
+        }
+
+        .navbar .meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            color: #aec6e8
+        }
+
+        .navbar .meta .user-chip {
+            background: rgba(255, 255, 255, .15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #fff
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 220px;
+            background: #fff;
+            border-right: 1px solid #E0E0E0;
+            position: fixed;
+            top: 56px;
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+            padding: 12px 0
+        }
+
+        .sidebar-section {
+            padding: 8px 16px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #9E9E9E;
+            letter-spacing: .8px;
+            text-transform: uppercase
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            color: #424242;
+            font-size: 13px;
+            transition: background .15s
+        }
+
+        .nav-item:hover {
+            background: #F5F5F5
+        }
+
+        .nav-item.active {
+            background: #EDEDED;
+            color: #123B67;
+            font-weight: 600;
+            border-left: 3px solid var(--nav)
+        }
+
+        .nav-item .material-icons {
+            font-size: 18px;
+            color: #616161
+        }
+
+        .nav-item.active .material-icons {
+            color: #0F3157
+        }
+
+        /* MAIN */
+        .main {
+            margin-left: 220px;
+            margin-top: 56px;
+            padding: 24px
+        }
+
+        /* PAGE HEADER */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px
+        }
+
+        .page-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--nav)
+        }
+
+        .page-header .date-badge {
+            background: #fff;
+            border: 1px solid #E0E0E0;
+            padding: 6px 14px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            color: var(--txt-form);
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        /* ALERT BANNER */
+        .alert-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-left: 4px solid #ffc107;
+            border-radius: var(--radius);
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px
+        }
+
+        .alert-banner .material-icons {
+            color: var(--warning)
+        }
+
+        /* KPI CARDS */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px
+        }
+
+        .kpi-card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+            border-left: 4px solid #E0E0E0;
+            position: relative;
+            overflow: hidden
+        }
+
+        .kpi-card.c-info {
+            border-left-color: var(--info)
+        }
+
+        .kpi-card.c-warning {
+            border-left-color: var(--warning)
+        }
+
+        .kpi-card.c-danger {
+            border-left-color: var(--danger)
+        }
+
+        .kpi-card.c-nav {
+            border-left-color: var(--nav)
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--txt-form);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 8px
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--txt-table);
+            line-height: 1
+        }
+
+        .kpi-value.c-warning {
+            color: #e65100
+        }
+
+        .kpi-value.c-danger {
+            color: var(--danger)
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--txt-form);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .kpi-sub .up {
+            color: var(--danger)
+        }
+
+        .kpi-sub .down {
+            color: var(--success)
+        }
+
+        .kpi-sub .stable {
+            color: var(--info)
+        }
+
+        .kpi-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: .08;
+            font-size: 52px;
+            color: var(--nav)
+        }
+
+        /* CHART ROW */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08)
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--nav);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .card-subtitle {
+            font-size: 11px;
+            color: var(--txt-form);
+            margin-bottom: 16px
+        }
+
+        /* TABLE */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px
+        }
+
+        thead tr {
+            background: #F5F5F5
+        }
+
+        th {
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--txt-form);
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            border-bottom: 2px solid #E0E0E0
+        }
+
+        td {
+            padding: 10px 12px;
+            color: var(--txt-table);
+            border-bottom: 1px solid #F5F5F5
+        }
+
+        tr:hover td {
+            background: #FAFAFA
+        }
+
+        /* BADGES */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600
+        }
+
+        .badge-success {
+            background: #e8f5e9;
+            color: var(--success)
+        }
+
+        .badge-warning {
+            background: #fff8e1;
+            color: #e65100
+        }
+
+        .badge-danger {
+            background: #fdecea;
+            color: var(--danger)
+        }
+
+        .badge-info {
+            background: #e0f7fa;
+            color: #00838f
+        }
+
+        /* BOTTOM ROW */
+        .bottom-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px
+        }
+
+        /* LEGEND */
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            flex-wrap: wrap
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--txt-form)
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="brand">
+            <div class="logo"><span>HT</span></div>
+            <h1>HealthTrace</h1>
+            <small>Sorveglianza Epidemiologica Ambientale</small>
+        </div>
+        <div class="meta">
+            <span>Campania · Molise · Calabria</span>
+            <span class="user-chip">&#128100; Dr.ssa M. Romano — ASL Campania</span>
+            <span>15 maggio 2026</span>
+        </div>
+    </nav>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-section">Principale</div>
+        <div class="nav-item active">
+            <span class="material-icons">dashboard</span>Dashboard
+        </div>
+        <div class="nav-item">
+            <span class="material-icons">map</span>Sorveglianza Geografica
+        </div>
+        <div class="sidebar-section">Analisi</div>
+        <div class="nav-item">
+            <span class="material-icons">bubble_chart</span>Correlazioni Amb.–Malattie
+        </div>
+        <div class="nav-item">
+            <span class="material-icons">air</span>Monitoraggio Ambientale
+        </div>
+        <div class="nav-item">
+            <span class="material-icons">trending_up</span>Modelli Predittivi
+        </div>
+        <div class="sidebar-section">Operativo</div>
+        <div class="nav-item">
+            <span class="material-icons">notifications</span>Gestione Allerte
+            <span
+                style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px">3</span>
+        </div>
+        <div class="nav-item">
+            <span class="material-icons">description</span>Report
+        </div>
+        <div class="nav-item">
+            <span class="material-icons">settings</span>Impostazioni
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+            <div>
+                <h2>Dashboard Principale</h2>
+                <div style="font-size:12px;color:var(--txt-form);margin-top:2px">Panoramica sorveglianza — aggiornamento
+                    automatico ogni 30 min</div>
+            </div>
+            <div class="date-badge">
+                <span class="material-icons" style="font-size:14px">calendar_today</span>
+                Settimana 20 · 12–18 maggio 2026
+            </div>
+        </div>
+
+        <!-- ALERT BANNER -->
+        <div class="alert-banner">
+            <span class="material-icons">warning</span>
+            <strong>Allerta PM2.5 attiva</strong> — Napoli (063049) e Caserta (061014): media giornaliera superiore alla
+            soglia di 25 μg/m³ per il 3° giorno consecutivo. Incremento casi influenzali atteso nei prossimi 5 giorni.
+            <a href="#"
+                style="margin-left:auto;color:#0F3157;font-size:12px;font-weight:600;text-decoration:none">Dettaglio
+                →</a>
+        </div>
+
+        <!-- KPI CARDS -->
+        <div class="kpi-grid">
+            <div class="kpi-card c-info">
+                <div class="kpi-label">Nuovi Casi — Settimana</div>
+                <div class="kpi-value">147</div>
+                <div class="kpi-sub"><span class="up">&#9650; +12%</span> rispetto alla settimana precedente</div>
+                <span class="kpi-icon material-icons">people</span>
+            </div>
+            <div class="kpi-card c-warning">
+                <div class="kpi-label">Allerte Attive</div>
+                <div class="kpi-value c-warning">3</div>
+                <div class="kpi-sub"><span style="color:#e65100">2 parametri ambientali · 1 soglia epid.</span></div>
+                <span class="kpi-icon material-icons">notifications_active</span>
+            </div>
+            <div class="kpi-card c-danger">
+                <div class="kpi-label">PM2.5 Medio (Napoli)</div>
+                <div class="kpi-value c-danger">28.4 <span style="font-size:14px">μg/m³</span></div>
+                <div class="kpi-sub"><span class="up">&#9650;</span> Soglia: 25 μg/m³ — <strong>sopra limite</strong>
+                </div>
+                <span class="kpi-icon material-icons">air</span>
+            </div>
+            <div class="kpi-card c-nav">
+                <div class="kpi-label">Comuni a Rischio Elevato</div>
+                <div class="kpi-value">18 <span style="font-size:14px">/ 387</span></div>
+                <div class="kpi-sub"><span class="stable">&#9654;</span> 4 nuovi rispetto alla settimana scorsa</div>
+                <span class="kpi-icon material-icons">place</span>
+            </div>
+        </div>
+
+        <!-- CHART ROW -->
+        <div class="chart-row">
+            <div class="card">
+                <div class="card-title"><span class="material-icons"
+                        style="font-size:16px;color:var(--info)">show_chart</span>Andamento Malattie Infettive — Ultimi
+                    90 Giorni</div>
+                <div class="card-subtitle">Campania · Molise · Calabria — casi settimanali segnalati (fonte GESAN)</div>
+                <div class="legend">
+                    <span class="legend-item"><span class="legend-dot"
+                            style="background:#0F3157"></span>Influenza</span>
+                    <span class="legend-item"><span class="legend-dot"
+                            style="background:#16A3B7"></span>Legionellosi</span>
+                    <span class="legend-item"><span class="legend-dot" style="background:#28A745"></span>Epatite
+                        A</span>
+                </div>
+                <canvas id="chartDisease" height="100"></canvas>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="material-icons"
+                        style="font-size:16px;color:var(--warning)">bar_chart</span>Parametri Ambientali vs Soglia</div>
+                <div class="card-subtitle">Media giornaliera di oggi · stazioni attive nelle 3 regioni</div>
+                <canvas id="chartEnv" height="160"></canvas>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid #F5F5F5">
+                    <div
+                        style="display:flex;justify-content:space-between;font-size:11px;color:var(--txt-form);margin-bottom:6px">
+                        <span>Stazioni ARPAC attive</span><strong style="color:var(--success)">44 / 47</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--txt-form)">
+                        <span>Stazioni MeteoHub attive</span><strong style="color:var(--success)">31 / 33</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM ROW -->
+        <div class="bottom-row">
+            <div class="card">
+                <div class="card-title"><span class="material-icons"
+                        style="font-size:16px;color:var(--danger)">list_alt</span>Ultime Segnalazioni Malattie Infettive
+                </div>
+                <div class="card-subtitle">Notifiche ricevute nelle ultime 48 ore — fonte ASL GESAN</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Malattia</th>
+                            <th>Comune</th>
+                            <th>Data</th>
+                            <th>Stato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Influenza</strong></td>
+                            <td>Napoli</td>
+                            <td>15/05/2026</td>
+                            <td><span class="badge badge-warning">In revisione</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Legionellosi</strong></td>
+                            <td>Salerno</td>
+                            <td>14/05/2026</td>
+                            <td><span class="badge badge-danger">Confermato</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Influenza</strong></td>
+                            <td>Caserta</td>
+                            <td>14/05/2026</td>
+                            <td><span class="badge badge-success">Chiuso</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Epatite A</strong></td>
+                            <td>Reggio Calabria</td>
+                            <td>13/05/2026</td>
+                            <td><span class="badge badge-danger">Confermato</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Influenza</strong></td>
+                            <td>Campobasso</td>
+                            <td>13/05/2026</td>
+                            <td><span class="badge badge-info">Notificato</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="material-icons"
+                        style="font-size:16px;color:var(--nav)">insights</span>Riepilogo per Malattia — Settimana
+                    Corrente</div>
+                <div class="card-subtitle">Confronto settimana precedente · tutte le 3 regioni</div>
+                <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px">
+                    <!-- Influenza -->
+                    <div style="border-left:3px solid #0F3157;padding-left:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-size:13px;font-weight:700;color:var(--txt-table)">Influenza</span>
+                            <span class="badge badge-warning">r = 0.821 con PM2.5</span>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;color:#0F3157;margin:4px 0">112 <span
+                                style="font-size:13px;color:var(--danger)">&#9650; +18%</span></div>
+                        <div style="height:6px;background:#E0E0E0;border-radius:3px">
+                            <div style="width:72%;height:100%;background:#0F3157;border-radius:3px"></div>
+                        </div>
+                        <div style="font-size:11px;color:var(--txt-form);margin-top:4px">Prognosi 7gg: <strong
+                                style="color:var(--danger)">↑ rischio moderato-alto</strong></div>
+                    </div>
+                    <!-- Legionellosi -->
+                    <div style="border-left:3px solid #16A3B7;padding-left:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-size:13px;font-weight:700;color:var(--txt-table)">Legionellosi</span>
+                            <span class="badge badge-info">r = 0.756 con Umidità</span>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;color:#16A3B7;margin:4px 0">24 <span
+                                style="font-size:13px;color:var(--txt-form)">&#9654; stabile</span></div>
+                        <div style="height:6px;background:#E0E0E0;border-radius:3px">
+                            <div style="width:38%;height:100%;background:#16A3B7;border-radius:3px"></div>
+                        </div>
+                        <div style="font-size:11px;color:var(--txt-form);margin-top:4px">Prognosi 7gg: <strong
+                                style="color:var(--warning)">↑ rischio moderato</strong></div>
+                    </div>
+                    <!-- Epatite A -->
+                    <div style="border-left:3px solid #28A745;padding-left:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <span style="font-size:13px;font-weight:700;color:var(--txt-table)">Epatite A</span>
+                            <span class="badge badge-success">r = 0.743 con Precipitazioni</span>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;color:#28A745;margin:4px 0">11 <span
+                                style="font-size:13px;color:var(--success)">&#9660; -8%</span></div>
+                        <div style="height:6px;background:#E0E0E0;border-radius:3px">
+                            <div style="width:18%;height:100%;background:#28A745;border-radius:3px"></div>
+                        </div>
+                        <div style="font-size:11px;color:var(--txt-form);margin-top:4px">Prognosi 7gg: <strong
+                                style="color:var(--success)">rischio basso</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Disease trend chart (90 days - 13 weekly points)
+        const weeks = ['Mar 3', 'Mar 10', 'Mar 17', 'Mar 24', 'Mar 31', 'Apr 7', 'Apr 14', 'Apr 21', 'Apr 28', 'Mag 5', 'Mag 12', 'Mag 19', 'Mag 26'];
+        const influenza = [220, 195, 178, 156, 134, 118, 102, 98, 108, 115, 112, 147, null];
+        const legionellosi = [8, 10, 12, 14, 18, 22, 24, 26, 28, 24, 24, null, null];
+        const epA = [14, 12, 11, 9, 8, 10, 11, 13, 14, 12, 11, null, null];
+
+        new Chart(document.getElementById('chartDisease'), {
+            type: 'line',
+            data: {
+                labels: weeks,
+                datasets: [
+                    { label: 'Influenza', data: influenza, borderColor: '#0F3157', backgroundColor: 'rgba(15,49,87,.08)', fill: true, tension: .4, pointRadius: 3, borderWidth: 2 },
+                    { label: 'Legionellosi', data: legionellosi, borderColor: '#16A3B7', backgroundColor: 'rgba(22,163,183,.08)', fill: true, tension: .4, pointRadius: 3, borderWidth: 2 },
+                    { label: 'Epatite A', data: epA, borderColor: '#28A745', backgroundColor: 'rgba(40,167,69,.08)', fill: true, tension: .4, pointRadius: 3, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true, plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#F5F5F5' }, ticks: { color: '#616161', font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { color: '#616161', font: { size: 11 } } }
+                }
+            }
+        });
+
+        // Environmental bar chart
+        new Chart(document.getElementById('chartEnv'), {
+            type: 'bar',
+            data: {
+                labels: ['PM2.5\n(μg/m³)', 'PM10\n(μg/m³)', 'NO₂\n(μg/m³)', 'O₃\n(μg/m³)', 'Temp\n(°C)', 'Umidità\n(%)'],
+                datasets: [
+                    { label: 'Valore attuale', data: [28.4, 38.1, 142, 88, 24.5, 78], backgroundColor: ['#DC3545', '#28A745', '#28A745', '#28A745', '#28A745', '#28A745'], borderRadius: 3 },
+                    { label: 'Soglia', data: [25, 50, 200, 120, 35, 90], backgroundColor: 'rgba(0,0,0,.08)', borderRadius: 3 }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { labels: { font: { size: 11 }, color: '#616161' } } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#F5F5F5' }, ticks: { color: '#616161', font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { color: '#616161', font: { size: 10 } } }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

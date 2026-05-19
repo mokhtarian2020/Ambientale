@@ -572,13 +572,68 @@ class DLNMApproximation:
 
 class ComprehensiveAnalyzer:
     """
-    Comprehensive analyzer that runs all models for a given disease
+    Comprehensive analyzer that runs all models for a given disease.
+
+    Can be used in two ways:
+      1. Pass a DataFrame directly to run_all_analyses(df)
+      2. Call run_from_dwh() to load data automatically from the DWH + GESAN
     """
-    
+
     def __init__(self, disease_type: str = "influenza"):
         self.disease_type = disease_type
         self.results = {}
-    
+
+    # ── DWH-driven entry point ─────────────────────────────────────────────────
+
+    def run_from_dwh(
+        self,
+        istat_codes: Optional[List[str]] = None,
+        date_from: Optional[str] = None,
+        date_to: Optional[str] = None,
+        healthtrace_db_url: Optional[str] = None,
+        gesan_db_url: Optional[str] = None,
+    ) -> Dict[str, ModelResults]:
+        """
+        Load data from the DWH and GESAN, then run all models.
+        This is the preferred production entry point.
+
+        Parameters
+        ----------
+        istat_codes : ISTAT comune codes to include; None = all available
+        date_from / date_to : ISO date range "YYYY-MM-DD"
+        healthtrace_db_url : override HealthTrace PostgreSQL URL
+        gesan_db_url : override GESAN PostgreSQL URL
+        """
+        try:
+            from analytics.dwh_data_loader import DwhDataLoader
+        except ImportError:
+            from dwh_data_loader import DwhDataLoader
+
+        loader = DwhDataLoader(
+            healthtrace_db_url=healthtrace_db_url,
+            gesan_db_url=gesan_db_url,
+        )
+        data = loader.load(
+            disease=self.disease_type,
+            istat_codes=istat_codes,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        if data.empty:
+            logger.warning(
+                "DWH returned no data for disease=%s istat=%s %s→%s",
+                self.disease_type, istat_codes, date_from, date_to,
+            )
+            return {}
+
+        logger.info(
+            "Loaded %d rows from DWH for %s (comuni=%d)",
+            len(data), self.disease_type, data["istat_code"].nunique(),
+        )
+        # ARIMAX / temporal models expect a 'date' column
+        data = data.rename(columns={"period_date": "date"})
+        return self.run_all_analyses(data)
+
     def run_all_analyses(self, data: pd.DataFrame) -> Dict[str, ModelResults]:
         """Run all analytical models"""
         
@@ -718,5 +773,34 @@ def run_example_analysis():
     return analyzer
 
 
+def run_from_dwh_example(disease: str = "influenza", istat_code: str = "063049"):
+    """
+    Run analysis loading real data from DWH + GESAN.
+    Requires live DB connections.
+    """
+    import sys
+    analyzer = ComprehensiveAnalyzer(disease)
+    results = analyzer.run_from_dwh(
+        istat_codes=[istat_code],
+        date_from="2022-01-01",
+        date_to="2023-12-31",
+    )
+    if not results:
+        print("No results — check DB connections.")
+        sys.exit(1)
+
+    comparison = analyzer.compare_models()
+    print(comparison.to_string(index=False))
+    best_name, best = analyzer.get_best_model()
+    print(f"\nBest model: {best_name}  R²={best.r_squared:.3f}  RMSE={best.rmse:.2f}")
+    return analyzer
+
+
 if __name__ == "__main__":
-    run_example_analysis()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--dwh":
+        disease = sys.argv[2] if len(sys.argv) > 2 else "influenza"
+        istat   = sys.argv[3] if len(sys.argv) > 3 else "063049"
+        run_from_dwh_example(disease, istat)
+    else:
+        run_example_analysis()
